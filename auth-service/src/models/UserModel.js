@@ -52,7 +52,7 @@ const userSchema = new mongoose.Schema(
 
         googleId: {
             type: String,
-            default: null,
+            default: undefined,
             unique: true, // mỗi Google ID là duy nhất
             sparse: true, // cho phép null nhưng vẫn unique
         },

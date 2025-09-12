@@ -203,7 +203,7 @@ const confirmRegisterOTP = async (otp) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const customerRole = await RoleModel.findOne({ name: "admin" });
+    const customerRole = await RoleModel.findOne({ name: "customer" });
 
     const newUser = new UserModel({
         user_name,
