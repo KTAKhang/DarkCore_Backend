@@ -285,6 +285,130 @@ const resetPassword = async (email, otp, newPassword) => {
     return { status: "OK", message: "Reset password successfully!" };
 };
 
+// Update Account Status
+const updateUserStatus = async (userId, newStatus) => {
+    try {
+        if (!['active', 'inactive', 'banned'].includes(newStatus)) {
+            return { status: "ERR", message: "Invalid status" };
+        }
+        const user = await UserModel.findByIdAndUpdate(userId, { status: newStatus }, { new: true }).populate("role_id", "name");
+        if (!user) {
+            return { status: "ERR", message: "User not found" };
+        }
+        return { status: "OK", data: user };
+    } catch (error) {
+        return { status: "ERR", message: error.message };
+    }
+};
+
+//Create Staff Account
+const createStaff = async (data) => {
+    try {
+        const { name, email, password, phone, address, roleName } = data;
+        if (!name || !email || !password || !phone || !address || !roleName) {
+            return { status: "ERR", message: "All fields are required" };
+        }
+
+        // Validation tương tự register
+        const isStrictEmail = (email) => /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
+        if (!isStrictEmail(email)) {
+            return { status: "ERR", message: "Invalid email" };
+        }
+        const isStrictPassword = (password) => /^(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
+        if (!isStrictPassword(password)) {
+            return { status: "ERR", message: "Password must contain at least 8 characters, including uppercase and number" };
+        }
+
+        const existingUser = await UserModel.findOne({ email });
+        if (existingUser) {
+            return { status: "ERR", message: "Email already exists" };
+        }
+
+        const role = await RoleModel.findOne({ name: roleName });
+        if (!role || role.name === 'customer') { // Giả sử staff không phải customer
+            return { status: "ERR", message: "Invalid staff role" };
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newStaff = new UserModel({
+            name,
+            email,
+            password: hashedPassword,
+            phone,
+            address,
+            role_id: role._id,
+            status: 'active'
+        });
+
+        await newStaff.save();
+        return { status: "OK", data: newStaff };
+    } catch (error) {
+        return { status: "ERR", message: error.message };
+    }
+};
+
+//Read User Accounts (List)
+const getUsers = async () => {
+    try {
+        const users = await UserModel.find().populate("role_id", "name");
+        return { status: "OK", data: users };
+    } catch (error) {
+        return { status: "ERR", message: error.message };
+    }
+};
+
+//Read Details User Account
+const getUserDetails = async (userId) => {
+    try {
+        const user = await UserModel.findById(userId).populate("role_id", "name");
+        if (!user) {
+            return { status: "ERR", message: "User not found" };
+        }
+        return { status: "OK", data: user };
+    } catch (error) {
+        return { status: "ERR", message: error.message };
+    }
+};
+
+//Search User Accounts
+const searchUsers = async (keyword) => {
+    try {
+        if (!keyword) {
+            return { status: "ERR", message: "Keyword is required" };
+        }
+        const users = await UserModel.find({
+            $or: [
+                { name: { $regex: keyword, $options: 'i' } },
+                { email: { $regex: keyword, $options: 'i' } }
+            ]
+        }).populate("role_id", "name");
+        return { status: "OK", data: users };
+    } catch (error) {
+        return { status: "ERR", message: error.message };
+    }
+};
+
+//Filter User Accounts
+const filterUsers = async (filters) => {
+    try {
+        const query = {};
+        if (filters.role) {
+            const role = await RoleModel.findOne({ name: filters.role });
+            if (!role) return { status: "ERR", message: "Role not found" };
+            query.role_id = role._id;
+        }
+        if (filters.status && ['active', 'inactive', 'banned'].includes(filters.status)) {
+            query.status = filters.status;
+        }
+
+        const users = await UserModel.find(query).populate("role_id", "name");
+        return { status: "OK", data: users };
+    } catch (error) {
+        return { status: "ERR", message: error.message };
+    }
+};
+
 
 module.exports = {
     sendResetPasswordOTP,
@@ -292,5 +416,11 @@ module.exports = {
     sendRegisterOTP,
     confirmRegisterOTP,
     loginWithGoogle,
-    loginUser
+    loginUser,
+    updateUserStatus,
+    createStaff,
+    getUsers,
+    getUserDetails,
+    searchUsers,
+    filterUsers
 };
