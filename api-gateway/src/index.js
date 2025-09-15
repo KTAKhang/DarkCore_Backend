@@ -5,7 +5,9 @@ import dotenv from "dotenv";
 
 import {
     authProxy,
-
+    catalogProxy,
+    // orderProxy,
+    // notificationProxy,
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -23,9 +25,8 @@ app.use(morgan("dev"));
 app.use("/auth", authProxy);
 
 // Protected routes (require JWT)
-// app.use("/products", gatewayAuth, productProxy);
-// app.use("/orders", gatewayAuth, orderProxy);
-// app.use("/notify", gatewayAuth, notificationProxy);
+app.use("/catalog", gatewayAuth, catalogProxy);
+
 
 // Root endpoint
 app.get("/", (req, res) => {
