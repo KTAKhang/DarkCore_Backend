@@ -74,33 +74,62 @@ const StaffService = {
 
     async getStaffs() {
         const roleIds = await RoleModel.find({ name: { $in: ALLOWED_ROLES } }).distinct('_id');
-        return UserModel.find({ role_id: { $in: roleIds } });
+        const users = await UserModel.find({ role_id: { $in: roleIds } })
+            .populate('role_id', 'name')
+            .lean();
+        return users.map(u => ({
+            ...u,
+            role_name: u.role_id?.name,
+            role_id: u.role_id?._id || u.role_id,
+        }));
     },
 
     async getStaffDetails(id) {
         const roleIds = await RoleModel.find({ name: { $in: ALLOWED_ROLES } }).distinct('_id');
-        return UserModel.findOne({ _id: id, role_id: { $in: roleIds } });
+        const user = await UserModel.findOne({ _id: id, role_id: { $in: roleIds } })
+            .populate('role_id', 'name')
+            .lean();
+        if (!user) return null;
+        return {
+            ...user,
+            role_name: user.role_id?.name,
+            role_id: user.role_id?._id || user.role_id,
+        };
     },
 
     async searchStaffs(keyword) {
         const roleIds = await RoleModel.find({ name: { $in: ALLOWED_ROLES } }).distinct('_id');
-        return UserModel.find({
+        const users = await UserModel.find({
             role_id: { $in: roleIds },
             $or: [
                 { user_name: { $regex: keyword, $options: 'i' } },
                 { email: { $regex: keyword, $options: 'i' } },
                 { phone: { $regex: keyword, $options: 'i' } }
             ]
-        });
+        }).populate('role_id', 'name').lean();
+        return users.map(u => ({
+            ...u,
+            role_name: u.role_id?.name,
+            role_id: u.role_id?._id || u.role_id,
+        }));
     },
 
     async filterStaffs(filters) {
-        const roleIds = await RoleModel.find({ name: { $in: ALLOWED_ROLES } }).distinct('_id');
+        let roleIds = await RoleModel.find({ name: { $in: ALLOWED_ROLES } }).distinct('_id');
+        if (filters.role && ALLOWED_ROLES.includes(filters.role)) {
+            const roleDoc = await RoleModel.findOne({ name: filters.role });
+            if (roleDoc) roleIds = [roleDoc._id];
+        }
         const query = { role_id: { $in: roleIds } };
         if (filters.status && ALLOWED_STATUS.includes(filters.status)) {
             query.status = filters.status;
         }
-        return UserModel.find(query);
+        const users = await UserModel.find(query).populate('role_id', 'name').lean();
+        return users.map(u => ({
+            ...u,
+            role_name: u.role_id?.name,
+            role_id: u.role_id?._id || u.role_id,
+        }));
     }
 };
 

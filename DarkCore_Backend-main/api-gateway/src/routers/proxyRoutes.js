@@ -22,9 +22,9 @@ export const staffProxy = createProxyMiddleware("/staff", {
 
 // Catalog Service (handles both products and categories)
 export const catalogProxy = createProxyMiddleware("/catalog", {
-    target: process.env.CATALOG_SERVICE_URL || "http://localhost:3002",
+    target: process.env.CATALOG_SERVICE_URL || "http://localhost:3004",
     changeOrigin: true,
-    pathRewrite: { "^/catalog": "" },
+    pathRewrite: { "^/catalog": "/api" },
 });
 
 export default router;
