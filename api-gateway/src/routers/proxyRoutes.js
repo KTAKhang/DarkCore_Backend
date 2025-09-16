@@ -17,7 +17,7 @@ export const authProxy = createProxyMiddleware("/auth", {
 export const catalogProxy = createProxyMiddleware("/catalog", {
     target: process.env.CATALOG_SERVICE_URL || "http://localhost:3002",
     changeOrigin: true,
-    pathRewrite: { "^/catalog": "/api" },
+    pathRewrite: { "^/catalog": "" },
 });
 
 // Staff Service
