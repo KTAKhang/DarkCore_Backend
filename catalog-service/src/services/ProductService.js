@@ -46,11 +46,6 @@ const createProduct = async (payload) => {
 
 const getProducts = async (query = {}) => {
     try {
-        console.log("=== Backend getProducts Debug ===");
-        console.log("Received query:", query);
-        console.log("sortBy:", query.sortBy);
-        console.log("sortOrder:", query.sortOrder);
-        
         const { page = 1, limit = 5 } = query;
         const filter = {};
         const keyword = (query.keyword ?? query.name ?? "").toString().trim();
@@ -79,23 +74,11 @@ const getProducts = async (query = {}) => {
         const sortBy = (query.sortBy ?? "").toString().trim().toLowerCase();
         const sortOrder = (query.sortOrder ?? "desc").toString().trim().toLowerCase();
         
-        console.log("=== Sort Processing ===");
-        console.log("sortBy processed:", sortBy);
-        console.log("sortOrder processed:", sortOrder);
-        
         if (sortBy === "price") {
             sortOption = { price: sortOrder === "desc" ? -1 : 1 };
-            console.log("Setting sort to price:", sortOption);
-        } else if (sortBy === "createdat" || sortBy === "created") {
+        } else if (sortBy === "createdAt" || sortBy === "createdat" || sortBy === "created") {
             sortOption = { createdAt: sortOrder === "asc" ? 1 : -1 };
-            console.log("Setting sort to createdAt:", sortOption);
-        } else {
-            // Nếu không có sortBy hoặc sortBy không hợp lệ, dùng mặc định
-            sortOption = { createdAt: -1 };
-            console.log("Using default sort:", sortOption);
         }
-
-        console.log("Final sortOption:", sortOption);
 
         // ✅ FIX: Populate đầy đủ category data bao gồm status
         const products = await ProductModel.find(filter)
@@ -104,15 +87,6 @@ const getProducts = async (query = {}) => {
             .skip((page - 1) * limit)
             .limit(Number(limit));
         const total = await ProductModel.countDocuments(filter);
-        
-        console.log("=== Query Results ===");
-        console.log("Found products:", products.length);
-        if (products.length > 0) {
-            console.log("First product createdAt:", products[0]?.createdAt);
-            console.log("First product category:", products[0]?.category);
-            console.log("Last product createdAt:", products[products.length - 1]?.createdAt);
-        }
-        
         const data = products.map((p) => {
             const obj = p.toObject();
             obj.description = obj.short_desc;
@@ -121,8 +95,6 @@ const getProducts = async (query = {}) => {
         });
         return { status: "OK", data, pagination: { page: Number(page), limit: Number(limit), total } };
     } catch (error) {
-        console.log("=== Backend Error ===");
-        console.log("Error:", error.message);
         return { status: "ERR", message: error.message };
     }
 };

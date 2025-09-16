@@ -21,11 +21,6 @@ const createCategory = async ({ name, description = "", image = "", imagePublicI
 
 const getCategories = async (query = {}) => {
     try {
-        console.log("=== Backend getCategories Debug ===");
-        console.log("Received query:", query);
-        console.log("sortBy:", query.sortBy);
-        console.log("sortOrder:", query.sortOrder);
-        
         const { page = 1, limit = 5 } = query;
         const filter = {};
         if (typeof query.status !== "undefined") {
@@ -42,42 +37,21 @@ const getCategories = async (query = {}) => {
         const sortBy = (query.sortBy ?? "").toString().trim().toLowerCase();
         const sortOrder = (query.sortOrder ?? "desc").toString().trim().toLowerCase();
         
-        console.log("=== Category Sort Processing ===");
-        console.log("sortBy processed:", sortBy);
-        console.log("sortOrder processed:", sortOrder);
-        
-        if (sortBy === "createdat" || sortBy === "created") {
+        if (sortBy === "createdAt" || sortBy === "createdat" || sortBy === "created") {
             sortOption = { createdAt: sortOrder === "asc" ? 1 : -1 };
-            console.log("Setting sort to createdAt:", sortOption);
-        } else {
-            // Nếu không có sortBy hoặc sortBy không hợp lệ, dùng mặc định
-            sortOption = { createdAt: -1 };
-            console.log("Using default sort:", sortOption);
         }
-
-        console.log("Final sortOption:", sortOption);
 
         const categories = await CategoryModel.find(filter)
             .sort(sortOption)
             .skip((page - 1) * limit)
             .limit(Number(limit));
         const total = await CategoryModel.countDocuments(filter);
-        
-        console.log("=== Category Query Results ===");
-        console.log("Found categories:", categories.length);
-        if (categories.length > 0) {
-            console.log("First category createdAt:", categories[0]?.createdAt);
-            console.log("Last category createdAt:", categories[categories.length - 1]?.createdAt);
-        }
-        
         return { 
             status: "OK", 
             data: categories, 
             pagination: { page: Number(page), limit: Number(limit), total } 
         };
     } catch (error) {
-        console.log("=== Category Backend Error ===");
-        console.log("Error:", error.message);
         return { status: "ERR", message: error.message };
     }
 };

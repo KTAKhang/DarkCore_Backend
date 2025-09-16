@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import {
     authProxy,
     catalogProxy,
+    cataloghomeProxy,
     // orderProxy,
     // notificationProxy,
 } from "./routers/proxyRoutes.js";
@@ -23,10 +24,10 @@ app.use(morgan("dev"));
 
 // Public routes (no auth)
 app.use("/auth", authProxy);
+app.use("/cataloghome", cataloghomeProxy);
 
 // Protected routes (require JWT)
 app.use("/catalog", gatewayAuth, catalogProxy);
-
 
 // Root endpoint
 app.get("/", (req, res) => {

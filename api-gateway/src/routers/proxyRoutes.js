@@ -16,3 +16,10 @@ export const catalogProxy = createProxyMiddleware("/catalog", {
     changeOrigin: true,
     pathRewrite: { "^/catalog": "" },
 });
+
+// Catalog Home Service
+export const cataloghomeProxy = createProxyMiddleware("/cataloghome", {
+    target: process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004",
+    changeOrigin: true,
+    pathRewrite: { "^/cataloghome": "" },
+});
