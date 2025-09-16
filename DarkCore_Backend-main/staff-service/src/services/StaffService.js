@@ -73,7 +73,8 @@ const StaffService = {
 
 
     async getStaffs() {
-        const roleIds = await RoleModel.find({ name: { $in: ALLOWED_ROLES } }).distinct('_id');
+        const roles = await RoleModel.find({ name: { $in: ALLOWED_ROLES } });
+        const roleIds = roles.map(role => role._id);
         const users = await UserModel.find({ role_id: { $in: roleIds } })
             .populate('role_id', 'name')
             .lean();
@@ -85,7 +86,8 @@ const StaffService = {
     },
 
     async getStaffDetails(id) {
-        const roleIds = await RoleModel.find({ name: { $in: ALLOWED_ROLES } }).distinct('_id');
+        const roles = await RoleModel.find({ name: { $in: ALLOWED_ROLES } });
+        const roleIds = roles.map(role => role._id);
         const user = await UserModel.findOne({ _id: id, role_id: { $in: roleIds } })
             .populate('role_id', 'name')
             .lean();
@@ -98,7 +100,8 @@ const StaffService = {
     },
 
     async searchStaffs(keyword) {
-        const roleIds = await RoleModel.find({ name: { $in: ALLOWED_ROLES } }).distinct('_id');
+        const roles = await RoleModel.find({ name: { $in: ALLOWED_ROLES } });
+        const roleIds = roles.map(role => role._id);
         const users = await UserModel.find({
             role_id: { $in: roleIds },
             $or: [
@@ -115,7 +118,8 @@ const StaffService = {
     },
 
     async filterStaffs(filters) {
-        let roleIds = await RoleModel.find({ name: { $in: ALLOWED_ROLES } }).distinct('_id');
+        let roles = await RoleModel.find({ name: { $in: ALLOWED_ROLES } });
+        let roleIds = roles.map(role => role._id);
         if (filters.role && ALLOWED_ROLES.includes(filters.role)) {
             const roleDoc = await RoleModel.findOne({ name: filters.role });
             if (roleDoc) roleIds = [roleDoc._id];
