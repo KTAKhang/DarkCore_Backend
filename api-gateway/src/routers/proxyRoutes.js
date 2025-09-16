@@ -9,3 +9,10 @@ export const authProxy = createProxyMiddleware("/auth", {
     changeOrigin: true,
     pathRewrite: { "^/auth": "" },
 });
+
+// Catalog Service (handles both products and categories)
+export const catalogProxy = createProxyMiddleware("/catalog", {
+    target: process.env.CATALOG_SERVICE_URL || "http://localhost:3002",
+    changeOrigin: true,
+    pathRewrite: { "^/catalog": "" },
+});
