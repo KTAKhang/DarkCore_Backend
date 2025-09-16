@@ -6,7 +6,7 @@ const createProduct = async (payload) => {
     try {
         const { name, price, stockQuantity } = payload;
         if (!name || price == null || stockQuantity == null || !payload.category) {
-            return { status: "ERR", message: "Missing required fields" };
+            return { status: "ERR", message: "Thiếu các trường bắt buộc" };
         }
         // Cho phép nhận category theo tên hoặc ObjectId; yêu cầu status=true
         let categoryDoc = null;
@@ -15,7 +15,7 @@ const createProduct = async (payload) => {
         } else {
             categoryDoc = await CategoryModel.findOne({ name: payload.category, status: true });
         }
-        if (!categoryDoc) return { status: "ERR", message: "Category not found or inactive" };
+        if (!categoryDoc) return { status: "ERR", message: "Không tìm thấy danh mục hoặc danh mục đang bị ẩn" };
         payload.category = categoryDoc._id;
 
         // Chuẩn hoá images từ upload middleware (nếu chỉ có 1 ảnh chuyển thành mảng)
@@ -38,7 +38,7 @@ const createProduct = async (payload) => {
         }
 
         const product = await ProductModel.create(payload);
-        return { status: "OK", message: "Product created", data: product };
+        return { status: "OK", message: "Sản phẩm đã được tạo thành công", data: product };
     } catch (error) {
         return { status: "ERR", message: error.message };
     }
@@ -46,7 +46,12 @@ const createProduct = async (payload) => {
 
 const getProducts = async (query = {}) => {
     try {
-        const { page = 1, limit = 20 } = query;
+        console.log("=== Backend getProducts Debug ===");
+        console.log("Received query:", query);
+        console.log("sortBy:", query.sortBy);
+        console.log("sortOrder:", query.sortOrder);
+        
+        const { page = 1, limit = 5 } = query;
         const filter = {};
         const keyword = (query.keyword ?? query.name ?? "").toString().trim();
         if (keyword) {
@@ -68,12 +73,46 @@ const getProducts = async (query = {}) => {
                 return { status: "OK", data: empty, pagination: { page: Number(page), limit: Number(limit), total: 0 } };
             }
         }
+
+        // Xử lý sort theo giá sản phẩm và ngày tạo
+        let sortOption = { createdAt: -1 }; // Mặc định sort theo thời gian tạo mới nhất
+        const sortBy = (query.sortBy ?? "").toString().trim().toLowerCase();
+        const sortOrder = (query.sortOrder ?? "desc").toString().trim().toLowerCase();
+        
+        console.log("=== Sort Processing ===");
+        console.log("sortBy processed:", sortBy);
+        console.log("sortOrder processed:", sortOrder);
+        
+        if (sortBy === "price") {
+            sortOption = { price: sortOrder === "desc" ? -1 : 1 };
+            console.log("Setting sort to price:", sortOption);
+        } else if (sortBy === "createdat" || sortBy === "created") {
+            sortOption = { createdAt: sortOrder === "asc" ? 1 : -1 };
+            console.log("Setting sort to createdAt:", sortOption);
+        } else {
+            // Nếu không có sortBy hoặc sortBy không hợp lệ, dùng mặc định
+            sortOption = { createdAt: -1 };
+            console.log("Using default sort:", sortOption);
+        }
+
+        console.log("Final sortOption:", sortOption);
+
+        // ✅ FIX: Populate đầy đủ category data bao gồm status
         const products = await ProductModel.find(filter)
-            .populate("category", "name")
-            .sort({ createdAt: -1 })
+            .populate("category", "name status") // Thêm status vào populate
+            .sort(sortOption)
             .skip((page - 1) * limit)
             .limit(Number(limit));
         const total = await ProductModel.countDocuments(filter);
+        
+        console.log("=== Query Results ===");
+        console.log("Found products:", products.length);
+        if (products.length > 0) {
+            console.log("First product createdAt:", products[0]?.createdAt);
+            console.log("First product category:", products[0]?.category);
+            console.log("Last product createdAt:", products[products.length - 1]?.createdAt);
+        }
+        
         const data = products.map((p) => {
             const obj = p.toObject();
             obj.description = obj.short_desc;
@@ -82,14 +121,17 @@ const getProducts = async (query = {}) => {
         });
         return { status: "OK", data, pagination: { page: Number(page), limit: Number(limit), total } };
     } catch (error) {
+        console.log("=== Backend Error ===");
+        console.log("Error:", error.message);
         return { status: "ERR", message: error.message };
     }
 };
 
 const getProductById = async (id) => {
     try {
-        const product = await ProductModel.findById(id).populate("category", "name");
-        if (!product) return { status: "ERR", message: "Product not found" };
+        // ✅ FIX: Populate đầy đủ category data bao gồm status
+        const product = await ProductModel.findById(id).populate("category", "name status");
+        if (!product) return { status: "ERR", message: "Không tìm thấy sản phẩm" };
         const obj = product.toObject();
         obj.description = obj.short_desc;
         obj.warrantyDetails = obj.detail_desc;
@@ -105,11 +147,11 @@ const updateProduct = async (id, payload) => {
             // Cho phép cập nhật category theo tên hoặc id; yêu cầu status=true
             if (mongoose.isValidObjectId(payload.category)) {
                 const cat = await CategoryModel.findOne({ _id: payload.category, status: true });
-                if (!cat) return { status: "ERR", message: "Category not found or inactive" };
+                if (!cat) return { status: "ERR", message: "Không tìm thấy danh mục hoặc danh mục đang bị ẩn" };
                 payload.category = cat._id;
             } else {
                 const cat = await CategoryModel.findOne({ name: payload.category, status: true });
-                if (!cat) return { status: "ERR", message: "Category not found or inactive" };
+                if (!cat) return { status: "ERR", message: "Không tìm thấy danh mục hoặc danh mục đang bị ẩn" };
                 payload.category = cat._id;
             }
         }
@@ -149,8 +191,8 @@ const updateProduct = async (id, payload) => {
         }
 
         const updated = await ProductModel.findByIdAndUpdate(id, payload, { new: true });
-        if (!updated) return { status: "ERR", message: "Product not found" };
-        return { status: "OK", message: "Product updated", data: updated };
+        if (!updated) return { status: "ERR", message: "Không tìm thấy sản phẩm" };
+        return { status: "OK", message: "Sản phẩm đã được cập nhật thành công", data: updated };
     } catch (error) {
         return { status: "ERR", message: error.message };
     }
@@ -160,7 +202,7 @@ const deleteProduct = async (id) => {
     try {
         const existing = await ProductModel.findById(id).select("imagePublicIds");
         const deleted = await ProductModel.findByIdAndDelete(id);
-        if (!deleted) return { status: "ERR", message: "Product not found" };
+        if (!deleted) return { status: "ERR", message: "Không tìm thấy sản phẩm" };
         // Xoá ảnh Cloudinary nếu có
         if (existing && Array.isArray(existing.imagePublicIds) && existing.imagePublicIds.length > 0) {
             try {
@@ -173,7 +215,7 @@ const deleteProduct = async (id) => {
                 // Bỏ qua lỗi xóa ảnh để không chặn xoá sản phẩm
             }
         }
-        return { status: "OK", message: "Product deleted" };
+        return { status: "OK", message: "Sản phẩm đã được xóa thành công" };
     } catch (error) {
         return { status: "ERR", message: error.message };
     }
@@ -200,5 +242,3 @@ module.exports = {
     deleteProduct,
     getProductStats, 
   };
-
-
