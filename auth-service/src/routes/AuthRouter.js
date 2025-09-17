@@ -24,6 +24,10 @@ AuthRouter.post("/google", AuthController.loginWithGoogle);
 
 AuthRouter.post("/sign-in", AuthController.loginUser);
 
+AuthRouter.post("/refresh-token", AuthController.refreshTokenController);
+
+AuthRouter.post("/logout", AuthController.logoutController);
+
 AuthRouter.post("/register/send-otp", AuthController.sendRegisterOTP);
 
 AuthRouter.post("/register/confirm", AuthController.confirmRegisterOTP);

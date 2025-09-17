@@ -5,7 +5,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const routes = require("./routes");
 const swaggerDocs = require("./swagger");
-
+const cookieParser = require("cookie-parser");
 dotenv.config();
 
 
@@ -17,10 +17,10 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-
+app.use(cookieParser());
 routes(app);
 swaggerDocs(app);
-
+app.use(cookieParser());
 mongoose
     .connect(process.env.MONGO_URL)
     .then(() => {

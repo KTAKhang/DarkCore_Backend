@@ -1,24 +1,36 @@
+const UserModel = require("../models/UserModel");
 const AuthService = require("../services/AuthService");
 
 
 const loginWithGoogle = async (req, res) => {
     try {
         const { idToken } = req.body;
-
         if (!idToken) {
             return res.status(400).json({
                 status: "ERR",
                 message: "Google ID token is required",
             });
         }
-
         const response = await AuthService.loginWithGoogle(idToken);
-
+        const cookieValue = response.token.refresh_token;
+        res.cookie("refreshToken", cookieValue, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "Strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
         if (response.status === "ERR") {
             return res.status(400).json(response);
         }
 
-        return res.status(200).json(response);
+        return res.status(200).json({
+            status: "OK",
+            message: "Login success",
+            data: response.data,
+            token: {
+                access_token: response.token.access_token, // chỉ trả access_token
+            },
+        });
     } catch (error) {
         return res.status(500).json({
             status: "ERR",
@@ -43,13 +55,70 @@ const loginUser = async (req, res) => {
             return res.status(200).json({ status: "ERR", message: "Invalid email " });
         }
         const response = await AuthService.loginUser(req.body);
-        return res.status(200).json(response);
+        const cookieValue = response.token.refresh_token;
+
+        res.cookie("refreshToken", cookieValue, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "Strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+        return res.status(200).json({
+            status: "OK",
+            message: "Login success",
+            data: response.data,
+            token: {
+                access_token: response.token.access_token,
+            },
+        });
     } catch (error) {
         return res.status(404).json({ message: error.message });
     }
 };
 
+// Refresh token
+const refreshTokenController = async (req, res) => {
+    try {
 
+        const refreshToken = req.cookies.refreshToken;
+
+
+        if (!refreshToken) return res.status(401).json({ message: "No refresh token" });
+
+        const newToken = await AuthService.refreshAccessToken(refreshToken);
+        return res.status(200).json({ status: "OK", token: newToken });
+    } catch (error) {
+        return res.status(401).json({ status: "ERR", message: error.message });
+    }
+
+};
+
+
+const logoutController = async (req, res) => {
+    try {
+        const refreshToken = req.cookies?.refreshToken;
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: true,
+            sameSite: "Strict"
+        });
+
+        if (!refreshToken) {
+            return res.status(200).json({ status: "OK", message: "No user logged in" });
+        }
+
+        // Tìm user theo refresh token
+        const user = await UserModel.findOne({ refreshToken });
+        if (user) {
+            // Xoá refresh token trong DB
+            await AuthService.logoutUser(user._id);
+        }
+
+        return res.status(200).json({ status: "OK", message: "Logout successful" });
+    } catch (error) {
+        return res.status(500).json({ status: "ERR", message: error.message });
+    }
+};
 
 const sendRegisterOTP = async (req, res) => {
     try {
@@ -192,5 +261,7 @@ module.exports = {
     sendRegisterOTP,
     confirmRegisterOTP,
     loginWithGoogle,
-    loginUser
+    loginUser,
+    refreshTokenController,
+    logoutController
 };
