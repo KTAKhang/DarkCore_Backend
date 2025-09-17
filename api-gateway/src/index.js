@@ -8,6 +8,7 @@ import {
     authProxy,
     staffProxy,
     catalogProxy,
+    cataloghomeProxy,
     // orderProxy,
     // notificationProxy,
 } from "./routers/proxyRoutes.js";
@@ -26,6 +27,7 @@ app.use(morgan("dev"));
 
 // Public routes (no auth)
 app.use("/auth", authProxy);
+app.use("/cataloghome", cataloghomeProxy);
 
 // Staff service (require JWT)
 app.use("/staff", gatewayAuth, staffProxy);
