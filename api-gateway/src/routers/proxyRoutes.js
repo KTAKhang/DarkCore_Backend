@@ -26,6 +26,11 @@ export const staffProxy = createProxyMiddleware("/staff", {
     changeOrigin: true,
     pathRewrite: { "^/staff": "" },
 });
-
+// Catalog Home Service
+export const cataloghomeProxy = createProxyMiddleware("/cataloghome", {
+    target: process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004",
+    changeOrigin: true,
+    pathRewrite: { "^/cataloghome": "" },
+});
 
 export default router;
