@@ -44,7 +44,7 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
-        access_token: {
+        refreshToken: {
             type: String,
             default: null,
         },

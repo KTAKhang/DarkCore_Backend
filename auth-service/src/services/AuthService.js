@@ -6,7 +6,7 @@ const { GoogleAuth } = require("google-auth-library");
 const cloudinary = require("../config/cloudinaryConfig");
 const { OAuth2Client } = require("google-auth-library");
 const mongoose = require("mongoose");
-
+const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const jwtService = require("./JwtService");
 const dotenv = require("dotenv");
@@ -28,20 +28,18 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const loginWithGoogle = async (idToken) => {
     try {
-
         const ticket = await client.verifyIdToken({
             idToken,
             audience: process.env.GOOGLE_CLIENT_ID,
         });
-
         const payload = ticket.getPayload();
-        const { sub: googleId, email, name, picture } = payload;
-
-
+        const { sub: googleId, email, name, picture, exp } = payload;
+        const now = Math.floor(Date.now() / 1000);
+        if (exp < now) {
+            throw { status: "ERR", message: "Google ID token expired" };
+        }
         let user = await UserModel.findOne({ $or: [{ googleId }, { email }] });
-
         if (!user) {
-
             user = new UserModel({
                 user_name: name,
                 email,
@@ -52,22 +50,23 @@ const loginWithGoogle = async (idToken) => {
             });
             await user.save();
         }
-
         if (user.status === false) {
             throw { status: "ERR", message: "Account is blocked" };
         }
-
-
         const populatedUser = await UserModel.findById(user._id).populate("role_id", "name -_id");
         const roleName = populatedUser?.role_id?.name || "customer";
-
-
-        const accessToken = await jwtService.generalAccessToken({
+        const accessToken = jwtService.generalAccessToken({
             _id: user._id,
             isAdmin: roleName === "admin",
             role: roleName,
         });
-
+        const refreshToken = jwtService.generalRefreshToken({
+            _id: user._id,
+            isAdmin: roleName === "admin",
+            role: roleName,
+        });
+        user.refreshToken = refreshToken;
+        await user.save();
         return {
             status: "OK",
             message: "Google login success",
@@ -82,40 +81,36 @@ const loginWithGoogle = async (idToken) => {
                 updatedAt: populatedUser.updatedAt,
             },
             token: {
-                access_token: accessToken,
+                access_token: accessToken, refresh_token: refreshToken
             },
         };
     } catch (error) {
         throw error;
     }
 };
-
 const loginUser = async ({ email, password }) => {
     try {
         const user = await UserModel.findOne({
             email: { $regex: new RegExp(`^${email}$`, "i") },
         });
-
         if (!user) throw { status: "ERR", message: "Account does not exist" };
         if (user.status === false) throw { status: "ERR", message: "Account is blocked" };
-
         const passwordMatch = bcrypt.compareSync(password, user.password);
         if (!passwordMatch) throw { status: "ERR", message: "Incorrect password" };
-
-
         const populatedUser = await UserModel.findById(user._id).populate("role_id", "name -_id");
         const roleName = populatedUser?.role_id?.name || "customer";
-
-
-        const accessToken = await jwtService.generalAccessToken({
+        const accessToken = jwtService.generalAccessToken({
             _id: user._id,
             isAdmin: roleName === "admin",
             role: roleName,
         });
-
-
-
-
+        const refreshToken = jwtService.generalRefreshToken({
+            _id: user._id,
+            isAdmin: roleName === "admin",
+            role: roleName,
+        });
+        user.refreshToken = refreshToken;
+        await user.save();
         return {
             status: "OK",
             message: "Login success",
@@ -132,12 +127,41 @@ const loginUser = async ({ email, password }) => {
                 updatedAt: populatedUser.updatedAt,
             },
             token: {
-                access_token: accessToken,
+                access_token: accessToken, refresh_token: refreshToken
             },
         };
     } catch (error) {
         throw error;
     }
+};
+
+// Refresh token
+const refreshAccessToken = async (refreshToken) => {
+    try {
+        console.log("refreshToken", refreshToken)
+        const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        const user = await UserModel.findById(payload._id);
+        console.log("payload", payload)
+
+        if (!user || user.refreshToken !== refreshToken)
+            throw { status: "ERR", message: "Invalid refresh token" };
+
+        const newAccessToken = jwtService.generalAccessToken({
+            _id: user._id,
+            isAdmin: payload.isAdmin,
+            role: payload.role,
+        });
+
+        return { access_token: newAccessToken };
+    } catch (err) {
+        throw { status: "ERR", message: "Refresh token invalid or expired" };
+    }
+};
+
+const logoutUser = async (userId) => {
+    // Xoá refresh token trong DB
+    await UserModel.findByIdAndUpdate(userId, { $unset: { refreshToken: 1 } });
+    return { status: "OK", message: "Logout success", userId };
 };
 
 const sendRegisterOTP = async (user_name, email, password, phone, address) => {
@@ -293,4 +317,6 @@ module.exports = {
     confirmRegisterOTP,
     loginWithGoogle,
     loginUser,
+    refreshAccessToken,
+    logoutUser
 };
