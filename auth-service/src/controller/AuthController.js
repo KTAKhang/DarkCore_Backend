@@ -8,7 +8,7 @@ const loginWithGoogle = async (req, res) => {
         if (!idToken) {
             return res.status(400).json({
                 status: "ERR",
-                message: "Google ID token is required",
+                message: "Mã thông báo ID Google là bắt buộc",
             });
         }
         const response = await AuthService.loginWithGoogle(idToken);
@@ -25,7 +25,7 @@ const loginWithGoogle = async (req, res) => {
 
         return res.status(200).json({
             status: "OK",
-            message: "Login success",
+            message: "Đăng nhập thành công",
             data: response.data,
             token: {
                 access_token: response.token.access_token, // chỉ trả access_token
@@ -45,14 +45,14 @@ const loginUser = async (req, res) => {
         if (!email || !password) {
             return res
                 .status(400)
-                .json({ status: "ERR", message: "All fields are required" });
+                .json({ status: "ERR", message: "Tất cả các trường đều bắt buộc" });
         }
         const isStrictEmail = (email) => {
             const strictRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             return strictRegex.test(email);
         };
         if (!isStrictEmail(email)) {
-            return res.status(400).json({ status: "ERR", message: "Invalid email" });
+            return res.status(400).json({ status: "ERR", message: "Email không hợp lệ" });
         }
         const response = await AuthService.loginUser(req.body);
         const cookieValue = response.token.refresh_token;
@@ -66,7 +66,7 @@ const loginUser = async (req, res) => {
         });
         return res.status(200).json({
             status: "OK",
-            message: "Login success",
+            message: "Đăng nhập thành công",
             data: response.data,
             token: {
                 access_token: response.token.access_token,
@@ -84,7 +84,7 @@ const refreshTokenController = async (req, res) => {
         const refreshToken = req.cookies.refreshToken;
 
 
-        if (!refreshToken) return res.status(401).json({ message: "No refresh token" });
+        if (!refreshToken) return res.status(401).json({ message: "Không có mã refresh token" });
 
         const newToken = await AuthService.refreshAccessToken(refreshToken);
         return res.status(200).json({ status: "OK", token: newToken });
@@ -107,7 +107,7 @@ const logoutController = async (req, res) => {
         });
 
         if (!refreshToken) {
-            return res.status(400).json({ status: "OK", message: "No user logged in" });
+            return res.status(400).json({ status: "OK", message: "Không có người dùng nào đăng nhập" });
         }
 
         // Tìm user theo refresh token
@@ -117,7 +117,7 @@ const logoutController = async (req, res) => {
             await AuthService.logoutUser(user._id);
         }
 
-        return res.status(200).json({ status: "OK", message: "Logout successful" });
+        return res.status(200).json({ status: "OK", message: "Đăng xuất thành công" });
     } catch (error) {
         return res.status(500).json({ status: "ERR", message: error.message });
     }
@@ -132,7 +132,7 @@ const sendRegisterOTP = async (req, res) => {
         if (!user_name || !email || !password || !phone || !address) {
             return res.status(400).json({
                 status: "ERR",
-                message: "Missing required fields",
+                message: "Thiếu các trường bắt buộc",
             });
         }
 
@@ -141,7 +141,7 @@ const sendRegisterOTP = async (req, res) => {
             return strictRegex.test(email);
         };
         if (!isStrictEmail(email)) {
-            return res.status(400).json({ status: "ERR", message: "Invalid email" });
+            return res.status(400).json({ status: "ERR", message: "Email không hợp lệ" });
         }
 
         const isStrictPassword = (password) => {
@@ -153,7 +153,7 @@ const sendRegisterOTP = async (req, res) => {
             return res.status(400).json({
                 status: "ERR",
                 message:
-                    "Password must contain at least 8 characters, including uppercase and number",
+                    "Mật khẩu phải chứa ít nhất 8 ký tự, bao gồm chữ hoa và số",
             });
         }
         // Check phone (VN: 9–11 digits, starts with 0)
@@ -164,7 +164,7 @@ const sendRegisterOTP = async (req, res) => {
         if (!isStrictPhone(phone)) {
             return res.status(400).json({
                 status: "ERR",
-                message: "Invalid phone number (must start with 0 and contain 9–11 digits)",
+                message: "Số điện thoại không hợp lệ (phải bắt đầu bằng số 0 và chứa 9–11 chữ số)",
             });
         }
 
@@ -191,7 +191,7 @@ const confirmRegisterOTP = async (req, res) => {
         if (!otp) {
             return res.status(400).json({
                 status: "ERR",
-                message: "OTP is required",
+                message: "OTP là bắt buộc",
             });
         }
 
@@ -217,7 +217,7 @@ const forgotPassword = async (req, res) => {
         if (!email) {
             return res.status(400).json({
                 status: "ERR",
-                message: "Email is required",
+                message: "Email bắt buộc",
             });
         }
 
@@ -246,7 +246,7 @@ const resetPassword = async (req, res) => {
         if (!email || !otp || !newPassword) {
             return res.status(400).json({
                 status: "ERR",
-                message: "Email, OTP, and new password are required",
+                message: "Email, OTP, and new password là bắt buộc",
             });
         }
 
@@ -259,7 +259,7 @@ const resetPassword = async (req, res) => {
             return res.status(400).json({
                 status: "ERR",
                 message:
-                    "Password must contain at least 8 characters, including uppercase and number",
+                    "Mật khẩu phải chứa ít nhất 8 ký tự, bao gồm chữ hoa và số",
             });
         }
 
