@@ -32,8 +32,9 @@ const createStaffController = async (req, res) => {
 
 const getStaffsController = async (req, res) => {
     try {
-        const response = await StaffService.getStaffs();
-        return res.status(200).json(response);
+        const response = await StaffService.getStaffs(req.query);
+        const code = response?.status === 'OK' ? 200 : 400;
+        return res.status(code).json(response);
     } catch (error) {
         return res.status(500).json({ status: "ERR", message: error.message });
     }
@@ -52,7 +53,7 @@ const getStaffDetailsController = async (req, res) => {
 const searchStaffsController = async (req, res) => {
     try {
         const { keyword } = req.query;
-        const response = await StaffService.searchStaffs(keyword);
+        const response = await StaffService.searchStaffs(keyword, req.query);
         return res.status(200).json(response);
     } catch (error) {
         return res.status(500).json({ status: "ERR", message: error.message });
