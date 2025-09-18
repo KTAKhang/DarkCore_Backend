@@ -94,9 +94,13 @@ const loginUser = async ({ email, password }) => {
             email: { $regex: new RegExp(`^${email}$`, "i") },
         });
         if (!user) throw { status: "ERR", message: "Account does not exist" };
+
         if (user.status === false) throw { status: "ERR", message: "Account is blocked" };
+
         const passwordMatch = bcrypt.compareSync(password, user.password);
+
         if (!passwordMatch) throw { status: "ERR", message: "Incorrect password" };
+
         const populatedUser = await UserModel.findById(user._id).populate("role_id", "name -_id");
         const roleName = populatedUser?.role_id?.name || "customer";
         const accessToken = jwtService.generalAccessToken({
@@ -213,6 +217,8 @@ const sendRegisterOTP = async (user_name, email, password, phone, address) => {
 
 
 const confirmRegisterOTP = async (otp) => {
+
+
     const tempRecord = await TempOTPModel.findOne({ otp });
 
     if (!tempRecord || tempRecord.expiresAt < Date.now()) {
@@ -250,13 +256,18 @@ const sendResetPasswordOTP = async (email) => {
     const user = await UserModel.findOne({ email });
     if (!user) throw new Error("Email does not exist!");
 
+    // ✅ Không cho reset password với tài khoản Google
+    if (user.isGoogleAccount) {
+        throw new Error("This account uses Google login and cannot reset password.");
+    }
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     user.resetPasswordOTP = otp;
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
-    try {
 
+    try {
         await transporter.sendMail({
             from: process.env.SMTP_USER,
             to: email,
@@ -283,9 +294,9 @@ const sendResetPasswordOTP = async (email) => {
         };
     }
 
-
-    return { status: "OK", message: "OTP send to email successfully." };
+    return { status: "OK", message: "OTP sent to email successfully." };
 };
+
 
 const resetPassword = async (email, otp, newPassword) => {
     const user = await UserModel.findOne({ email });
