@@ -16,7 +16,7 @@ const loginWithGoogle = async (req, res) => {
         res.cookie("refreshToken", cookieValue, {
             httpOnly: true,
             secure: true,
-            sameSite: "Strict",
+            sameSite: "lax",
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
         if (response.status === "ERR") {
@@ -52,7 +52,7 @@ const loginUser = async (req, res) => {
             return strictRegex.test(email);
         };
         if (!isStrictEmail(email)) {
-            return res.status(200).json({ status: "ERR", message: "Invalid email " });
+            return res.status(400).json({ status: "ERR", message: "Invalid email" });
         }
         const response = await AuthService.loginUser(req.body);
         const cookieValue = response.token.refresh_token;
@@ -60,8 +60,9 @@ const loginUser = async (req, res) => {
         res.cookie("refreshToken", cookieValue, {
             httpOnly: true,
             secure: true,
-            sameSite: "Strict",
+            sameSite: "lax",
             maxAge: 7 * 24 * 60 * 60 * 1000,
+            path: "/"
         });
         return res.status(200).json({
             status: "OK",
@@ -97,14 +98,16 @@ const refreshTokenController = async (req, res) => {
 const logoutController = async (req, res) => {
     try {
         const refreshToken = req.cookies?.refreshToken;
+        console.log("refreshToken", refreshToken)
         res.clearCookie("refreshToken", {
             httpOnly: true,
             secure: true,
-            sameSite: "Strict"
+            sameSite: "lax",
+            path: "/"
         });
 
         if (!refreshToken) {
-            return res.status(200).json({ status: "OK", message: "No user logged in" });
+            return res.status(400).json({ status: "OK", message: "No user logged in" });
         }
 
         // Tìm user theo refresh token
@@ -133,6 +136,14 @@ const sendRegisterOTP = async (req, res) => {
             });
         }
 
+        const isStrictEmail = (email) => {
+            const strictRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            return strictRegex.test(email);
+        };
+        if (!isStrictEmail(email)) {
+            return res.status(400).json({ status: "ERR", message: "Invalid email" });
+        }
+
         const isStrictPassword = (password) => {
             const regex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
             return regex.test(password);
@@ -145,6 +156,18 @@ const sendRegisterOTP = async (req, res) => {
                     "Password must contain at least 8 characters, including uppercase and number",
             });
         }
+        // Check phone (VN: 9–11 digits, starts with 0)
+        const isStrictPhone = (phone) => {
+            const phoneRegex = /^0\d{8,10}$/;
+            return phoneRegex.test(phone);
+        };
+        if (!isStrictPhone(phone)) {
+            return res.status(400).json({
+                status: "ERR",
+                message: "Invalid phone number (must start with 0 and contain 9–11 digits)",
+            });
+        }
+
 
         const response = await AuthService.sendRegisterOTP(user_name, email, password, phone, address);
 
