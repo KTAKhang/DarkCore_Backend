@@ -6,7 +6,7 @@ const { GoogleAuth } = require("google-auth-library");
 const cloudinary = require("../config/cloudinaryConfig");
 const { OAuth2Client } = require("google-auth-library");
 const mongoose = require("mongoose");
-
+const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const jwtService = require("./JwtService");
 const dotenv = require("dotenv");
@@ -28,20 +28,18 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const loginWithGoogle = async (idToken) => {
     try {
-
         const ticket = await client.verifyIdToken({
             idToken,
             audience: process.env.GOOGLE_CLIENT_ID,
         });
-
         const payload = ticket.getPayload();
-        const { sub: googleId, email, name, picture } = payload;
-
-
+        const { sub: googleId, email, name, picture, exp } = payload;
+        const now = Math.floor(Date.now() / 1000);
+        if (exp < now) {
+            throw { status: "ERR", message: "Mã thông báo ID Google đã hết hạn" };
+        }
         let user = await UserModel.findOne({ $or: [{ googleId }, { email }] });
-
         if (!user) {
-
             user = new UserModel({
                 user_name: name,
                 email,
@@ -52,25 +50,26 @@ const loginWithGoogle = async (idToken) => {
             });
             await user.save();
         }
-
         if (user.status === false) {
-            throw { status: "ERR", message: "Account is blocked" };
+            throw { status: "ERR", message: "Tài khoản bị chặn" };
         }
-
-
         const populatedUser = await UserModel.findById(user._id).populate("role_id", "name -_id");
         const roleName = populatedUser?.role_id?.name || "customer";
-
-
-        const accessToken = await jwtService.generalAccessToken({
+        const accessToken = jwtService.generalAccessToken({
             _id: user._id,
             isAdmin: roleName === "admin",
             role: roleName,
         });
-
+        const refreshToken = jwtService.generalRefreshToken({
+            _id: user._id,
+            isAdmin: roleName === "admin",
+            role: roleName,
+        });
+        user.refreshToken = refreshToken;
+        await user.save();
         return {
             status: "OK",
-            message: "Google login success",
+            message: "Đăng nhập Google thành công",
             data: {
                 _id: populatedUser._id,
                 user_name: populatedUser.user_name,
@@ -82,43 +81,43 @@ const loginWithGoogle = async (idToken) => {
                 updatedAt: populatedUser.updatedAt,
             },
             token: {
-                access_token: accessToken,
+                access_token: accessToken, refresh_token: refreshToken
             },
         };
     } catch (error) {
         throw error;
     }
 };
-
 const loginUser = async ({ email, password }) => {
     try {
         const user = await UserModel.findOne({
             email: { $regex: new RegExp(`^${email}$`, "i") },
         });
+        if (!user) throw { status: "ERR", message: "Tài khoản không tồn tại" };
 
-        if (!user) throw { status: "ERR", message: "Account does not exist" };
-        if (user.status === false) throw { status: "ERR", message: "Account is blocked" };
+        if (user.status === false) throw { status: "ERR", message: "Tài khoản bị chặn" };
 
         const passwordMatch = bcrypt.compareSync(password, user.password);
-        if (!passwordMatch) throw { status: "ERR", message: "Incorrect password" };
 
+        if (!passwordMatch) throw { status: "ERR", message: "Mật khẩu không đúng" };
 
         const populatedUser = await UserModel.findById(user._id).populate("role_id", "name -_id");
         const roleName = populatedUser?.role_id?.name || "customer";
-
-
-        const accessToken = await jwtService.generalAccessToken({
+        const accessToken = jwtService.generalAccessToken({
             _id: user._id,
             isAdmin: roleName === "admin",
             role: roleName,
         });
-
-
-
-
+        const refreshToken = jwtService.generalRefreshToken({
+            _id: user._id,
+            isAdmin: roleName === "admin",
+            role: roleName,
+        });
+        user.refreshToken = refreshToken;
+        await user.save();
         return {
             status: "OK",
-            message: "Login success",
+            message: "Đăng nhập thành công",
             data: {
                 _id: populatedUser._id,
                 user_name: populatedUser.user_name,
@@ -132,7 +131,7 @@ const loginUser = async ({ email, password }) => {
                 updatedAt: populatedUser.updatedAt,
             },
             token: {
-                access_token: accessToken,
+                access_token: accessToken, refresh_token: refreshToken
             },
         };
     } catch (error) {
@@ -140,15 +139,44 @@ const loginUser = async ({ email, password }) => {
     }
 };
 
+// Refresh token
+const refreshAccessToken = async (refreshToken) => {
+    try {
+        console.log("refreshToken", refreshToken)
+        const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        const user = await UserModel.findById(payload._id);
+        console.log("payload", payload)
+
+        if (!user || user.refreshToken !== refreshToken)
+            throw { status: "ERR", message: "refresh token không hợp lệ" };
+
+        const newAccessToken = jwtService.generalAccessToken({
+            _id: user._id,
+            isAdmin: payload.isAdmin,
+            role: payload.role,
+        });
+
+        return { access_token: newAccessToken };
+    } catch (err) {
+        throw { status: "ERR", message: "Mã thông báo làm mới không hợp lệ hoặc đã hết hạn" };
+    }
+};
+
+const logoutUser = async (userId) => {
+    // Xoá refresh token trong DB
+    await UserModel.findByIdAndUpdate(userId, { $unset: { refreshToken: 1 } });
+    return { status: "OK", message: "Đăng xuất thành công", userId };
+};
+
 const sendRegisterOTP = async (user_name, email, password, phone, address) => {
     const existingUser = await UserModel.findOne({ email });
     const existingUserName = await UserModel.findOne({ user_name });
     if (existingUser) {
-        return { status: "ERR", message: "Email already registered!" };
+        return { status: "ERR", message: "Email đã được đăng ký!" };
     }
 
     if (existingUserName) {
-        return { status: "ERR", message: "Username already taken!" };
+        return { status: "ERR", message: "Tên người dùng đã được sử dụng!" };
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -184,22 +212,24 @@ const sendRegisterOTP = async (user_name, email, password, phone, address) => {
 `,
     });
 
-    return { status: "OK", message: "OTP sent to email" };
+    return { status: "OK", message: "OTP đã được gửi đến email" };
 };
 
 
 const confirmRegisterOTP = async (otp) => {
+
+
     const tempRecord = await TempOTPModel.findOne({ otp });
 
     if (!tempRecord || tempRecord.expiresAt < Date.now()) {
-        return { status: "ERR", message: "Invalid or expired OTP" };
+        return { status: "ERR", message: "OTP không hợp lệ hoặc hết hạn" };
     }
 
     const { user_name, email, password, phone, address } = tempRecord;
 
     const existingUser = await UserModel.findOne({ email });
     if (existingUser) {
-        return { status: "ERR", message: "Email already registered" };
+        return { status: "ERR", message: "Email đã được đăng ký" };
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -224,15 +254,20 @@ const confirmRegisterOTP = async (otp) => {
 
 const sendResetPasswordOTP = async (email) => {
     const user = await UserModel.findOne({ email });
-    if (!user) throw new Error("Email does not exist!");
+    if (!user) throw new Error("Email không tồn tại!");
+
+    // ✅ Không cho reset password với tài khoản Google
+    if (user.isGoogleAccount) {
+        throw new Error("Tài khoản này sử dụng thông tin đăng nhập Google và không thể đặt lại mật khẩu.");
+    }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     user.resetPasswordOTP = otp;
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
-    try {
 
+    try {
         await transporter.sendMail({
             from: process.env.SMTP_USER,
             to: email,
@@ -255,24 +290,24 @@ const sendResetPasswordOTP = async (email) => {
     } catch (err) {
         return {
             status: "ERR",
-            message: "Failed to send email. Please try again later.",
+            message: "Không gửi được email. Vui lòng thử lại sau.",
         };
     }
 
-
-    return { status: "OK", message: "OTP send to email successfully." };
+    return { status: "OK", message: "Đã gửi OTP tới email thành công." };
 };
+
 
 const resetPassword = async (email, otp, newPassword) => {
     const user = await UserModel.findOne({ email });
-    if (!user) throw new Error("Account does not exist!");
+    if (!user) throw new Error("Tài khoản không tồn tại!");
 
     if (user.resetPasswordOTP !== otp) {
-        throw new Error("OTP is invalid ");
+        throw new Error("OTP không hợp lệ");
     }
 
     if (user.resetPasswordExpires < Date.now()) {
-        throw new Error("OTP is expired");
+        throw new Error("OTP là bắt buộc");
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -282,7 +317,7 @@ const resetPassword = async (email, otp, newPassword) => {
     user.resetPasswordExpires = undefined;
     await user.save();
 
-    return { status: "OK", message: "Reset password successfully!" };
+    return { status: "OK", message: "Đặt lại mật khẩu thành công!" };
 };
 
 
@@ -293,4 +328,6 @@ module.exports = {
     confirmRegisterOTP,
     loginWithGoogle,
     loginUser,
+    refreshAccessToken,
+    logoutUser
 };
