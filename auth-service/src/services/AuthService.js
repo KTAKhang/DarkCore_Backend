@@ -142,10 +142,8 @@ const loginUser = async ({ email, password }) => {
 // Refresh token
 const refreshAccessToken = async (refreshToken) => {
     try {
-        console.log("refreshToken", refreshToken)
         const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
         const user = await UserModel.findById(payload._id);
-        console.log("payload", payload)
 
         if (!user || user.refreshToken !== refreshToken)
             throw { status: "ERR", message: "refresh token không hợp lệ" };
@@ -158,7 +156,10 @@ const refreshAccessToken = async (refreshToken) => {
 
         return { access_token: newAccessToken };
     } catch (err) {
-        throw { status: "ERR", message: "Mã thông báo làm mới không hợp lệ hoặc đã hết hạn" };
+        if (err.name === "TokenExpiredError") {
+            throw { status: "ERR", message: "Refresh token đã hết hạn" };
+        }
+        throw { status: "ERR", message: "Refresh token không hợp lệ" };
     }
 };
 
@@ -248,7 +249,7 @@ const confirmRegisterOTP = async (otp) => {
     await newUser.save();
     await TempOTPModel.deleteOne({ email });
 
-    return { status: "OK", message: "Register successfully" };
+    return { status: "OK", message: "Đăng ký thành công" };
 };
 
 
@@ -307,7 +308,7 @@ const resetPassword = async (email, otp, newPassword) => {
     }
 
     if (user.resetPasswordExpires < Date.now()) {
-        throw new Error("OTP là bắt buộc");
+        throw new Error("OTP là hết hạn");
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);

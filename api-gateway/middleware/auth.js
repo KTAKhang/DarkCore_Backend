@@ -8,6 +8,9 @@ export const gatewayAuth = (req, res, next) => {
         req.user = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET);
         next();
     } catch (err) {
+        if (err.name === "TokenExpiredError") {
+            return res.status(401).json({ error: "Token expired" });
+        }
         return res.status(403).json({ error: "Invalid token" });
     }
 };

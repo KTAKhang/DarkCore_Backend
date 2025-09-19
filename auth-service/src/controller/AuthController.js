@@ -25,7 +25,7 @@ const loginWithGoogle = async (req, res) => {
 
         return res.status(200).json({
             status: "OK",
-            message: "Đăng nhập thành công",
+            message: "Đăng nhập Google thành công",
             data: response.data,
             token: {
                 access_token: response.token.access_token, // chỉ trả access_token
@@ -98,7 +98,6 @@ const refreshTokenController = async (req, res) => {
 const logoutController = async (req, res) => {
     try {
         const refreshToken = req.cookies?.refreshToken;
-        console.log("refreshToken", refreshToken)
         res.clearCookie("refreshToken", {
             httpOnly: true,
             secure: true,
