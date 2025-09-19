@@ -72,17 +72,41 @@ const StaffService = {
     },
 
 
-    async getStaffs() {
+    async getStaffs(query = {}) {
+        const { page = 1, limit = 10 } = query;
         const roles = await RoleModel.find({ name: { $in: ALLOWED_ROLES } });
         const roleIds = roles.map(role => role._id);
-        const users = await UserModel.find({ role_id: { $in: roleIds } })
+
+        const filter = { role_id: { $in: roleIds } };
+
+        // Sorting options
+        const sortBy = (query.sortBy ?? "").toString().trim().toLowerCase();
+        const sortOrder = (query.sortOrder ?? "desc").toString().trim().toLowerCase();
+        let sortOption = { createdAt: -1 }; // default newest first
+        if (sortBy === "name" || sortBy === "username" || sortBy === "user_name") {
+            sortOption = { user_name: sortOrder === "asc" ? 1 : -1 };
+        } else if (sortBy === "createdat" || sortBy === "created" || sortBy === "createdat" || sortBy === "created_at") {
+            sortOption = { createdAt: sortOrder === "asc" ? 1 : -1 };
+        } else {
+            sortOption = { createdAt: -1 };
+        }
+
+        const users = await UserModel.find(filter)
             .populate('role_id', 'name')
+            .collation({ locale: 'en', strength: 2 })
+            .sort(sortOption)
+            .skip((page - 1) * limit)
+            .limit(Number(limit))
             .lean();
-        return users.map(u => ({
+        const total = await UserModel.countDocuments(filter);
+
+        const data = users.map(u => ({
             ...u,
             role_name: u.role_id?.name,
             role_id: u.role_id?._id || u.role_id,
         }));
+
+        return { status: "OK", data, pagination: { page: Number(page), limit: Number(limit), total } };
     },
 
     async getStaffDetails(id) {
@@ -99,41 +123,87 @@ const StaffService = {
         };
     },
 
-    async searchStaffs(keyword) {
+    async searchStaffs(keyword, query = {}) {
+        const { page = 1, limit = 10 } = query;
         const roles = await RoleModel.find({ name: { $in: ALLOWED_ROLES } });
         const roleIds = roles.map(role => role._id);
-        const users = await UserModel.find({
+
+        // Sorting
+        const sortBy = (query.sortBy ?? "").toString().trim().toLowerCase();
+        const sortOrder = (query.sortOrder ?? "desc").toString().trim().toLowerCase();
+        let sortOption = { createdAt: -1 };
+        if (sortBy === "name" || sortBy === "username" || sortBy === "user_name") {
+            sortOption = { user_name: sortOrder === "asc" ? 1 : -1 };
+        } else if (sortBy === "createdat" || sortBy === "created" || sortBy === "created_at" || sortBy === "createdat") {
+            sortOption = { createdAt: sortOrder === "asc" ? 1 : -1 };
+        }
+
+        const criteria = {
             role_id: { $in: roleIds },
             $or: [
                 { user_name: { $regex: keyword, $options: 'i' } },
                 { email: { $regex: keyword, $options: 'i' } },
                 { phone: { $regex: keyword, $options: 'i' } }
             ]
-        }).populate('role_id', 'name').lean();
-        return users.map(u => ({
+        };
+
+        const users = await UserModel.find(criteria)
+            .populate('role_id', 'name')
+            .collation({ locale: 'en', strength: 2 })
+            .sort(sortOption)
+            .skip((page - 1) * limit)
+            .limit(Number(limit))
+            .lean();
+        const total = await UserModel.countDocuments(criteria);
+
+        const data = users.map(u => ({
             ...u,
             role_name: u.role_id?.name,
             role_id: u.role_id?._id || u.role_id,
         }));
+
+        return { status: "OK", data, pagination: { page: Number(page), limit: Number(limit), total } };
     },
 
-    async filterStaffs(filters) {
+    async filterStaffs(filters = {}) {
+        const { page = 1, limit = 10 } = filters;
         let roles = await RoleModel.find({ name: { $in: ALLOWED_ROLES } });
         let roleIds = roles.map(role => role._id);
         if (filters.role && ALLOWED_ROLES.includes(filters.role)) {
             const roleDoc = await RoleModel.findOne({ name: filters.role });
             if (roleDoc) roleIds = [roleDoc._id];
         }
-        const query = { role_id: { $in: roleIds } };
+        const criteria = { role_id: { $in: roleIds } };
         if (filters.status && ALLOWED_STATUS.includes(filters.status)) {
-            query.status = filters.status;
+            criteria.status = filters.status;
         }
-        const users = await UserModel.find(query).populate('role_id', 'name').lean();
-        return users.map(u => ({
+
+        // Sorting
+        const sortBy = (filters.sortBy ?? "").toString().trim().toLowerCase();
+        const sortOrder = (filters.sortOrder ?? "desc").toString().trim().toLowerCase();
+        let sortOption = { createdAt: -1 };
+        if (sortBy === "name" || sortBy === "username" || sortBy === "user_name") {
+            sortOption = { user_name: sortOrder === "asc" ? 1 : -1 };
+        } else if (sortBy === "createdat" || sortBy === "created" || sortBy === "created_at" || sortBy === "createdat") {
+            sortOption = { createdAt: sortOrder === "asc" ? 1 : -1 };
+        }
+
+        const users = await UserModel.find(criteria)
+            .populate('role_id', 'name')
+            .collation({ locale: 'en', strength: 2 })
+            .sort(sortOption)
+            .skip((page - 1) * limit)
+            .limit(Number(limit))
+            .lean();
+        const total = await UserModel.countDocuments(criteria);
+
+        const data = users.map(u => ({
             ...u,
             role_name: u.role_id?.name,
             role_id: u.role_id?._id || u.role_id,
         }));
+
+        return { status: "OK", data, pagination: { page: Number(page), limit: Number(limit), total } };
     }
 };
 
