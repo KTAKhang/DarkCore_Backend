@@ -53,7 +53,7 @@ app.use("/cataloghome", cataloghomeProxy);
 app.use("/staff", gatewayAuth, staffProxy);
 
 // Catalog service (require JWT)
-app.use("/catalog", gatewayAuth, catalogProxy);
+app.use("/catalog", catalogProxy);
 
 // Root endpoint
 app.get("/", (req, res) => {
