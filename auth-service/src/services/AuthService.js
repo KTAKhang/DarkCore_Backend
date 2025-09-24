@@ -217,32 +217,35 @@ const sendRegisterOTP = async (user_name, email, password, phone, address) => {
 };
 
 
-const confirmRegisterOTP = async (otp) => {
+const confirmRegisterOTP = async (email, otp) => {
+    // Tìm OTP theo email + otp
+    const tempRecord = await TempOTPModel.findOne({ email, otp });
 
-
-    const tempRecord = await TempOTPModel.findOne({ otp });
-
-    if (!tempRecord || tempRecord.expiresAt < Date.now()) {
-        return { status: "ERR", message: "OTP không hợp lệ hoặc hết hạn" };
+    if (!tempRecord) {
+        return { status: "ERR", message: "Email hoặc OTP không đúng" };
     }
 
-    const { user_name, email, password, phone, address } = tempRecord;
+    if (tempRecord.expiresAt < Date.now()) {
+        return { status: "ERR", message: "OTP đã hết hạn" };
+    }
 
+    // Check email đã tồn tại trong bảng User chưa
     const existingUser = await UserModel.findOne({ email });
     if (existingUser) {
         return { status: "ERR", message: "Email đã được đăng ký" };
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(tempRecord.password, 10);
     const customerRole = await RoleModel.findOne({ name: "customer" });
 
     const newUser = new UserModel({
-        user_name,
+        user_name: tempRecord.user_name,
         email,
         password: hashedPassword,
         role_id: customerRole._id,
-        phone,
-        address,
+        phone: tempRecord.phone,
+        address: tempRecord.address,
         avatar: "https://res.cloudinary.com/dkbsae4kc/image/upload/v1753147941/avatars/jrrdk9hkpwm70bkzte6u.jpg",
     });
 
@@ -251,6 +254,7 @@ const confirmRegisterOTP = async (otp) => {
 
     return { status: "OK", message: "Đăng ký thành công" };
 };
+
 
 
 const sendResetPasswordOTP = async (email) => {

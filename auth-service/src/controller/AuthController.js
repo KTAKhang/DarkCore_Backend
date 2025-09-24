@@ -144,7 +144,7 @@ const sendRegisterOTP = async (req, res) => {
         }
 
         const isStrictPassword = (password) => {
-            const regex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+            const regex = /^(?=.*[A-Z])(?=.*\d).{8,8}$/;
             return regex.test(password);
         };
 
@@ -185,16 +185,16 @@ const sendRegisterOTP = async (req, res) => {
 
 const confirmRegisterOTP = async (req, res) => {
     try {
-        const { otp } = req.body;
+        const { email, otp } = req.body;
 
-        if (!otp) {
+        if (!email || !otp) {
             return res.status(400).json({
                 status: "ERR",
-                message: "OTP là bắt buộc",
+                message: "Email và OTP là bắt buộc",
             });
         }
 
-        const response = await AuthService.confirmRegisterOTP(otp);
+        const response = await AuthService.confirmRegisterOTP(email, otp);
 
         if (response.status === "ERR") {
             return res.status(400).json(response);
@@ -208,6 +208,7 @@ const confirmRegisterOTP = async (req, res) => {
         });
     }
 };
+
 
 const forgotPassword = async (req, res) => {
     try {
@@ -250,7 +251,7 @@ const resetPassword = async (req, res) => {
         }
 
         const isStrictPassword = (password) => {
-            const regex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+            const regex = /^(?=.*[A-Z])(?=.*\d).{8,8}$/;
             return regex.test(password);
         };
 
