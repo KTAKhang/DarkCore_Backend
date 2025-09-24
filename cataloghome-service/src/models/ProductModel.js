@@ -12,6 +12,7 @@ const productSchema = new mongoose.Schema(
         brand: { type: String, default: "", trim: true },
         detail_desc: { type: String, default: "", trim: true, maxlength: [1000, "detail_desc must be at most 1000 characters"] },
         status: { type: Boolean, default: true },
+        favorite: { type: Boolean, default: false },
     },
     { timestamps: true }
 );
