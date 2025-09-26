@@ -39,12 +39,25 @@ export const catalogProxy = createProxyMiddleware("/catalog", {
     pathRewrite: { "^/catalog": "" },
 });
 
-// Staff Service
+// Staff Service nhớ đổi tên lại từ staff-service về user-service cho tường minh
 export const staffProxy = createProxyMiddleware("/staff", {
     target: process.env.STAFF_SERVICE_URL || "http://localhost:3003",
     changeOrigin: true,
     pathRewrite: { "^/staff": "" },
 });
+export const profileProxy = createProxyMiddleware("/profile", {
+    target: process.env.USER_SERVICE_URL || "http://localhost:3210",
+    changeOrigin: true,
+    pathRewrite: { "^/profile": "" },
+});
+
+export const customerProxy = createProxyMiddleware("/customer", {
+    target: process.env.USER_SERVICE_URL || "http://localhost:3210",
+    changeOrigin: true,
+    pathRewrite: { "^/customer": "" },
+});
+// Staff Service///
+
 // Catalog Home Service
 export const cataloghomeProxy = createProxyMiddleware("/cataloghome", {
     target: process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004",

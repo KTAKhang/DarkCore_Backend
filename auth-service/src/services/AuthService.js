@@ -142,10 +142,8 @@ const loginUser = async ({ email, password }) => {
 // Refresh token
 const refreshAccessToken = async (refreshToken) => {
     try {
-        console.log("refreshToken", refreshToken)
         const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
         const user = await UserModel.findById(payload._id);
-        console.log("payload", payload)
 
         if (!user || user.refreshToken !== refreshToken)
             throw { status: "ERR", message: "refresh token không hợp lệ" };
@@ -158,7 +156,10 @@ const refreshAccessToken = async (refreshToken) => {
 
         return { access_token: newAccessToken };
     } catch (err) {
-        throw { status: "ERR", message: "Mã thông báo làm mới không hợp lệ hoặc đã hết hạn" };
+        if (err.name === "TokenExpiredError") {
+            throw { status: "ERR", message: "Refresh token đã hết hạn" };
+        }
+        throw { status: "ERR", message: "Refresh token không hợp lệ" };
     }
 };
 
@@ -216,40 +217,44 @@ const sendRegisterOTP = async (user_name, email, password, phone, address) => {
 };
 
 
-const confirmRegisterOTP = async (otp) => {
+const confirmRegisterOTP = async (email, otp) => {
+    // Tìm OTP theo email + otp
+    const tempRecord = await TempOTPModel.findOne({ email, otp });
 
-
-    const tempRecord = await TempOTPModel.findOne({ otp });
-
-    if (!tempRecord || tempRecord.expiresAt < Date.now()) {
-        return { status: "ERR", message: "OTP không hợp lệ hoặc hết hạn" };
+    if (!tempRecord) {
+        return { status: "ERR", message: "Email hoặc OTP không đúng" };
     }
 
-    const { user_name, email, password, phone, address } = tempRecord;
+    if (tempRecord.expiresAt < Date.now()) {
+        return { status: "ERR", message: "OTP đã hết hạn" };
+    }
 
+    // Check email đã tồn tại trong bảng User chưa
     const existingUser = await UserModel.findOne({ email });
     if (existingUser) {
         return { status: "ERR", message: "Email đã được đăng ký" };
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(tempRecord.password, 10);
     const customerRole = await RoleModel.findOne({ name: "customer" });
 
     const newUser = new UserModel({
-        user_name,
+        user_name: tempRecord.user_name,
         email,
         password: hashedPassword,
         role_id: customerRole._id,
-        phone,
-        address,
+        phone: tempRecord.phone,
+        address: tempRecord.address,
         avatar: "https://res.cloudinary.com/dkbsae4kc/image/upload/v1753147941/avatars/jrrdk9hkpwm70bkzte6u.jpg",
     });
 
     await newUser.save();
     await TempOTPModel.deleteOne({ email });
 
-    return { status: "OK", message: "Register successfully" };
+    return { status: "OK", message: "Đăng ký thành công" };
 };
+
 
 
 const sendResetPasswordOTP = async (email) => {
@@ -307,7 +312,7 @@ const resetPassword = async (email, otp, newPassword) => {
     }
 
     if (user.resetPasswordExpires < Date.now()) {
-        throw new Error("OTP là bắt buộc");
+        throw new Error("OTP hết hạn");
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
