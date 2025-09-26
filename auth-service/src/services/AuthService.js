@@ -312,7 +312,7 @@ const resetPassword = async (email, otp, newPassword) => {
     }
 
     if (user.resetPasswordExpires < Date.now()) {
-        throw new Error("OTP là hết hạn");
+        throw new Error("OTP hết hạn");
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);

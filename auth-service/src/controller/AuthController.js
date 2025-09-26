@@ -77,22 +77,29 @@ const loginUser = async (req, res) => {
     }
 };
 
-// Refresh token
 const refreshTokenController = async (req, res) => {
     try {
-
         const refreshToken = req.cookies.refreshToken;
-
-
-        if (!refreshToken) return res.status(401).json({ message: "Không có mã refresh token" });
+        if (!refreshToken) {
+            return res.status(401).json({ status: "ERR", message: "Không có refresh token" });
+        }
 
         const newToken = await AuthService.refreshAccessToken(refreshToken);
+
         return res.status(200).json({ status: "OK", token: newToken });
     } catch (error) {
+        // Nếu refresh token hết hạn hoặc không hợp lệ => xoá cookie
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: true,
+            sameSite: "lax",
+            path: "/",
+        });
+
         return res.status(401).json({ status: "ERR", message: error.message });
     }
-
 };
+
 
 
 const logoutController = async (req, res) => {
@@ -124,9 +131,7 @@ const logoutController = async (req, res) => {
 
 const sendRegisterOTP = async (req, res) => {
     try {
-
         const { user_name, email, password, phone, address } = req.body;
-
 
         if (!user_name || !email || !password || !phone || !address) {
             return res.status(400).json({
@@ -135,6 +140,19 @@ const sendRegisterOTP = async (req, res) => {
             });
         }
 
+        // Validate user_name (3–30 ký tự, không ký tự đặc biệt ngoài _ và khoảng trắng)
+        const isStrictUserName = (name) => {
+            const regex = /^[a-zA-Z0-9_ ]{3,30}$/;
+            return regex.test(name);
+        };
+        if (!isStrictUserName(user_name)) {
+            return res.status(400).json({
+                status: "ERR",
+                message: "Tên người dùng phải từ 3–30 ký tự, chỉ gồm chữ cái, số, khoảng trắng hoặc dấu gạch dưới",
+            });
+        }
+
+        // Validate email
         const isStrictEmail = (email) => {
             const strictRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             return strictRegex.test(email);
@@ -143,19 +161,19 @@ const sendRegisterOTP = async (req, res) => {
             return res.status(400).json({ status: "ERR", message: "Email không hợp lệ" });
         }
 
+        // Validate password (8 ký tự, có ít nhất 1 chữ hoa và 1 số)
         const isStrictPassword = (password) => {
-            const regex = /^(?=.*[A-Z])(?=.*\d).{8,8}$/;
+            const regex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
             return regex.test(password);
         };
-
         if (!isStrictPassword(password)) {
             return res.status(400).json({
                 status: "ERR",
-                message:
-                    "Mật khẩu phải chứa ít nhất 8 ký tự, bao gồm chữ hoa và số",
+                message: "Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa và số",
             });
         }
-        // Check phone (VN: 9–11 digits, starts with 0)
+
+        // Validate phone (VN: 9–11 digits, starts with 0)
         const isStrictPhone = (phone) => {
             const phoneRegex = /^0\d{8,10}$/;
             return phoneRegex.test(phone);
@@ -167,6 +185,17 @@ const sendRegisterOTP = async (req, res) => {
             });
         }
 
+        // Validate address (5–100 ký tự, cho phép chữ, số, dấu , . - và khoảng trắng)
+        const isStrictAddress = (addr) => {
+            const regex = /^[a-zA-Z0-9\s,.-]{5,100}$/;
+            return regex.test(addr);
+        };
+        if (!isStrictAddress(address)) {
+            return res.status(400).json({
+                status: "ERR",
+                message: "Địa chỉ phải từ 5–100 ký tự, chỉ chứa chữ, số, khoảng trắng và các ký tự , . -",
+            });
+        }
 
         const response = await AuthService.sendRegisterOTP(user_name, email, password, phone, address);
 
@@ -182,6 +211,7 @@ const sendRegisterOTP = async (req, res) => {
         });
     }
 };
+
 
 const confirmRegisterOTP = async (req, res) => {
     try {
@@ -259,7 +289,7 @@ const resetPassword = async (req, res) => {
             return res.status(400).json({
                 status: "ERR",
                 message:
-                    "Mật khẩu phải chứa ít nhất 8 ký tự, bao gồm chữ hoa và số",
+                    "Mật khẩu phải chứa 8 ký tự, bao gồm chữ hoa và số",
             });
         }
 

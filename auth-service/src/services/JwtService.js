@@ -4,14 +4,14 @@ dotenv.config();
 
 const generalAccessToken = (payload) => {
     const accessToken = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1h",
+        expiresIn: "1m",
     });
     return accessToken;
 };
 
 const generalRefreshToken = (payload) => {
     const refreshToken = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
-        expiresIn: "1d",
+        expiresIn: "7d",
     });
     return refreshToken;
 };
