@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const { USER_ROLES, USER_STATUS, USER_LOYALTY_SEGMENTS } = require("./enums");
 
 const userSchema = new mongoose.Schema(
     {
@@ -21,7 +20,7 @@ const userSchema = new mongoose.Schema(
         password: {
             type: String,
             required: function () {
-                return !this.isGoogleAccount; // Nếu không phải Google thì bắt buộc
+                return !this.isGoogleAccount;
             },
         },
         avatar: {
@@ -42,48 +41,34 @@ const userSchema = new mongoose.Schema(
             default: null,
         },
         status: {
-            type: Boolean,
-            default: true,
+            type: String,
+            enum: ['active', 'inactive', 'banned'],
+            default: 'active',
         },
         access_token: {
             type: String,
             default: null,
         },
-
-
         googleId: {
             type: String,
             default: undefined,
-            unique: true, // mỗi Google ID là duy nhất
-            sparse: true, // cho phép null nhưng vẫn unique
+            unique: true,
+            sparse: true,
         },
         isGoogleAccount: {
             type: Boolean,
             default: false,
         },
-
-
         phone: {
             type: String,
-            default: null,
-            required: function () {
-                return !this.isGoogleAccount;
-            },
             trim: true,
         },
         address: {
             type: String,
-            default: null,
-            required: function () {
-                return !this.isGoogleAccount;
-            },
             trim: true,
         },
-      
     },
-    {
-        timestamps: true,
-    }
+    { timestamps: true }
 );
 
 const UserModel = mongoose.model("users", userSchema);

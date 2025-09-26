@@ -12,6 +12,7 @@ import {
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
+import { catalogAuth } from "../middleware/catalogAuth.js";
 
 dotenv.config();
 
@@ -48,8 +49,12 @@ app.use(morgan("dev"));
 app.use("/auth", authProxy);
 app.use("/cataloghome", cataloghomeProxy);
 
+// Catalog service - optional authentication (public + authenticated)
+app.use("/catalog", catalogAuth, catalogProxy);
+
 // Staff service (require JWT)
 app.use("/staff", gatewayAuth, staffProxy);
+
 
 app.use("/profile", gatewayAuth, profileProxy);
 
@@ -63,5 +68,7 @@ app.get("/", (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`✅ API Gateway running at http://localhost:${PORT}`);
+
     console.log(`🔧 Targets → AUTH: ${process.env.AUTH_SERVICE_URL || 'http://localhost:3001'}, STAFF: ${process.env.STAFF_SERVICE_URL || 'http://localhost:3003'}, CATALOG: ${process.env.CATALOG_SERVICE_URL || 'http://localhost:3004'}`);
 }); // ✅ FIX: Thêm dấu đóng ngoặc
+

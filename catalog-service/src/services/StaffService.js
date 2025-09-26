@@ -16,6 +16,7 @@ const StaffService = {
             if (!staff) {
                 return { status: "ERR", message: "Staff not found" };
             }
+            // Chỉ cho phép đổi status nếu là sales-staff hoặc repair-staff
             const roleDoc = await RoleModel.findById(staff.role_id);
             if (!roleDoc || !ALLOWED_ROLES.includes(roleDoc.name)) {
                 return { status: "ERR", message: "Not a staff account" };

@@ -33,10 +33,27 @@ const brands = async (req, res) => {
     return res.status(code).json(result);
 };
 
+// Controller để lấy danh sách sản phẩm yêu thích
+const favorites = async (req, res) => {
+    const result = await ProductHomeService.getFavoriteProducts(req.query);
+    const code = result.status === "OK" ? 200 : 400;
+    return res.status(code).json(result);
+};
+
+// Controller để toggle favorite status của sản phẩm
+const toggleFavorite = async (req, res) => {
+    const { id } = req.params;
+    const result = await ProductHomeService.toggleFavorite(id);
+    const code = result.status === "OK" ? 200 : 400;
+    return res.status(code).json(result);
+};
+
 module.exports = { 
     list, 
     detail, 
     featured, 
     getByCategory, 
-    brands 
+    brands,
+    favorites,
+    toggleFavorite
 };

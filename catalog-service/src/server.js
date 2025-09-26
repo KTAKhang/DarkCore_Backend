@@ -24,13 +24,12 @@ swaggerDocs(app);
 mongoose
     .connect(process.env.MONGO_URL)
     .then(() => {
-        console.log(" Connected to MongoDB");
-        console.log(` Swagger Docs available at http://localhost:${port}/api-docs`);
+        // Connected to MongoDB
     })
     .catch((error) => {
-        console.error(" MongoDB connection error:", error);
+        // MongoDB connection error
     });
 
 app.listen(port, () => {
-    console.log(` Server is running on http://localhost:${port}`);
+    // Server is running
 });
