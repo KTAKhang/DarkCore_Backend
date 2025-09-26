@@ -1,13 +1,40 @@
+// const mongoose = require("mongoose");
+
+// const CartItemSchema = new mongoose.Schema({
+//   productId: { type: mongoose.Schema.Types.ObjectId, required: true },
+//   quantity: { type: Number, required: true },
+// });
+
+// const CartSchema = new mongoose.Schema(
+//   {
+//     userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+//     items: [CartItemSchema],
+//   },
+//   { timestamps: true }
+// );
+
+// CartSchema.virtual("sum").get(function () {
+//   return this.items.length;
+// });
+
+// CartSchema.set("toJSON", { virtuals: true });
+// CartSchema.set("toObject", { virtuals: true });
+
+// module.exports = mongoose.model("Cart", CartSchema);
 const mongoose = require("mongoose");
 
 const CartItemSchema = new mongoose.Schema({
-  productId: { type: mongoose.Schema.Types.ObjectId, required: true },
-  quantity: { type: Number, required: true },
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "product",
+    required: true,
+  },
+  quantity: { type: Number, required: true, min: 1 },
 });
 
 const CartSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    cartId: { type: String, required: true, unique: true }, // Thay userId bằng cartId
     items: [CartItemSchema],
   },
   { timestamps: true }

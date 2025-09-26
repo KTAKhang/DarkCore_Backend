@@ -1,7 +1,7 @@
 const Cart = require("../models/CartModel");
 
 class CartService {
-  // Lấy giỏ hàng theo user
+ 
   static async getCart(userId) {
     let cart = await Cart.findOne({ userId }).populate("items.productId");
     if (!cart) {
@@ -11,7 +11,7 @@ class CartService {
     return cart;
   }
 
-  // Thêm sản phẩm vào giỏ
+ 
   static async addItem(userId, productId, quantity) {
     if (!productId || !quantity) {
       throw new Error("Missing productId or quantity");
@@ -23,16 +23,16 @@ class CartService {
       cart = new Cart({ userId, items: [] });
     }
 
-    // Kiểm tra sản phẩm đã có trong giỏ chưa
+
     const itemIndex = cart.items.findIndex(
       (item) => item.productId.toString() === productId
     );
 
     if (itemIndex > -1) {
-      // Nếu có rồi thì tăng số lượng
+     
       cart.items[itemIndex].quantity += quantity;
     } else {
-      // Nếu chưa có thì thêm mới
+    
       cart.items.push({ productId, quantity });
     }
 
@@ -40,7 +40,7 @@ class CartService {
     return cart;
   }
 
-  // Cập nhật số lượng
+ 
   static async updateItem(userId, itemId, quantity) {
     const cart = await Cart.findOne({ userId });
     if (!cart) throw new Error("Cart not found");
@@ -53,7 +53,7 @@ class CartService {
     return cart;
   }
 
-  // Xóa item
+  
   static async removeItem(userId, itemId) {
     const cart = await Cart.findOne({ userId });
     if (!cart) throw new Error("Cart not found");
@@ -63,7 +63,7 @@ class CartService {
     return cart;
   }
 
-  // Xóa toàn bộ giỏ
+  
   static async clearCart(userId) {
     const cart = await Cart.findOne({ userId });
     if (!cart) throw new Error("Cart not found");
@@ -75,3 +75,82 @@ class CartService {
 }
 
 module.exports = CartService;
+// const Cart = require("../models/CartModel");
+
+// class CartService {
+
+//   static async getCart(cartId) {
+//     let cart = await Cart.findOne({ cartId }).populate("items.productId");
+//     if (!cart) {
+//       cart = new Cart({ cartId, items: [] });
+//       await cart.save();
+//     }
+//     return cart;
+//   }
+
+
+//   static async addItem(cartId, productId, quantity) {
+//     if (!productId || !quantity) {
+//       throw new Error("Missing productId or quantity");
+//     }
+
+//     let cart = await Cart.findOne({ cartId });
+
+//     if (!cart) {
+//       cart = new Cart({ cartId, items: [] });
+//     }
+
+//     const itemIndex = cart.items.findIndex(
+//       (item) => item.productId.toString() === productId
+//     );
+
+//     if (itemIndex > -1) {
+    
+//       cart.items[itemIndex].quantity += quantity;
+//     } else {
+      
+//       cart.items.push({ productId, quantity });
+//     }
+
+//     await cart.save();
+//     return cart;
+//   }
+
+
+//   static async updateItem(cartId, itemId, quantity) {
+//     const cart = await Cart.findOne({ cartId });
+//     if (!cart) throw new Error("Cart not found");
+
+//     const item = cart.items.id(itemId);
+//     if (!item) throw new Error("Item not found");
+
+//     item.quantity = quantity;
+//     await cart.save();
+//     return cart;
+//   }
+
+ 
+//   static async removeItem(cartId, itemId) {
+//     const cart = await Cart.findOne({ cartId });
+//     if (!cart) throw new Error("Cart not found");
+
+//     cart.items = cart.items.filter((item) => item._id.toString() !== itemId);
+//     await cart.save();
+//     return cart;
+//   }
+
+
+//   static async clearCart(cartId) {
+//     const cart = await Cart.findOne({ cartId });
+//     if (!cart) {
+     
+//       return { cartId, items: [] };
+//     }
+
+//     cart.items = [];
+//     await cart.save();
+//     return cart;
+//   }
+// }
+
+// module.exports = CartService;

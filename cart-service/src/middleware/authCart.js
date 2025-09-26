@@ -62,5 +62,6 @@ const authAdminCart = async (req, res, next) => {
     return res.status(500).json({ message: "Internal server error", status: "ERR" });
   }
 };
+console.error(err)
 
 module.exports = { verifyToken, authUserCart, authAdminCart };

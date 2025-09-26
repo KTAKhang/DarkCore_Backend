@@ -22,7 +22,7 @@ mongoose
 app.use("/api/cart", cartRouter);
 
 // Server listen
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3005;
 app.listen(PORT, () => {
   console.log(`🛒 Cart Service running on port ${PORT}`);
 });
