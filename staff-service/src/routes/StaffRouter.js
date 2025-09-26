@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authAdminMiddleware } = require('../middleware/authMiddleware');
+const { attachUserFromHeader, authAdminMiddleware } = require('../middleware/authMiddleware');
 const {
     updateStaffStatusController,
     createStaffController,
@@ -11,7 +11,7 @@ const {
 } = require('../controller/StaffController');
 
 // Áp dụng middleware kiểm tra quyền admin cho tất cả route
-router.use(authAdminMiddleware);
+router.use(attachUserFromHeader, authAdminMiddleware);
 
 router.put('/status/:staffId', updateStaffStatusController);
 router.post('/staff', createStaffController);

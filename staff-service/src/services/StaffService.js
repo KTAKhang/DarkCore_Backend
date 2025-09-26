@@ -3,13 +3,20 @@ const UserModel = require("../models/UserModel");
 const RoleModel = require("../models/RolesModel");
 
 const ALLOWED_ROLES = ["sales-staff", "repair-staff"];
-const ALLOWED_STATUS = ["active", "inactive"];
+
+// Normalize various status inputs to boolean
+function normalizeStatus(input) {
+    if (input === true || input === "true" || input === "active") return true;
+    if (input === false || input === "false" || input === "inactive") return false;
+    return null;
+}
 
 const StaffService = {
 
     async updateStaffStatus(staffId, status) {
         try {
-            if (!staffId || !status || !ALLOWED_STATUS.includes(status)) {
+            const normalized = normalizeStatus(status);
+            if (!staffId || normalized === null) {
                 return { status: "ERR", message: "Staff ID and valid status are required" };
             }
             const staff = await UserModel.findById(staffId);
@@ -20,7 +27,7 @@ const StaffService = {
             if (!roleDoc || !ALLOWED_ROLES.includes(roleDoc.name)) {
                 return { status: "ERR", message: "Not a staff account" };
             }
-            staff.status = status;
+            staff.status = normalized;
             await staff.save();
             return { status: "OK", message: "Staff status updated successfully" };
         } catch (error) {
@@ -59,7 +66,7 @@ const StaffService = {
                 phone,
                 address,
                 role_id: staffRole._id,
-                status: "active",
+                status: true,
                 avatar: data.avatar || ""
                 // Không truyền googleId khi tạo staff
             });
@@ -77,6 +84,10 @@ const StaffService = {
         const roleIds = roles.map(role => role._id);
 
         const filter = { role_id: { $in: roleIds } };
+        if (query.status !== undefined) {
+            const normalized = normalizeStatus(query.status);
+            if (normalized !== null) filter.status = normalized;
+        }
 
         // Sorting options
         const sortBy = (query.sortBy ?? "").toString().trim().toLowerCase();
@@ -145,6 +156,10 @@ const StaffService = {
                 { phone: { $regex: keyword, $options: 'i' } }
             ]
         };
+        if (query.status !== undefined) {
+            const normalized = normalizeStatus(query.status);
+            if (normalized !== null) criteria.status = normalized;
+        }
 
         const users = await UserModel.find(criteria)
             .populate('role_id', 'name')
@@ -173,8 +188,9 @@ const StaffService = {
             if (roleDoc) roleIds = [roleDoc._id];
         }
         const criteria = { role_id: { $in: roleIds } };
-        if (filters.status && ALLOWED_STATUS.includes(filters.status)) {
-            criteria.status = filters.status;
+        if (filters.status !== undefined) {
+            const normalized = normalizeStatus(filters.status);
+            if (normalized !== null) criteria.status = normalized;
         }
 
         // Sorting
