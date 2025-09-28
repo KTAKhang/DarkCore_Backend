@@ -21,7 +21,10 @@ const createCategory = async ({ name, description = "", image = "", imagePublicI
 
 const getCategories = async (query = {}) => {
     try {
-        const { page = 1, limit = 5 } = query;
+        // Validation và chuẩn hóa page, limit
+        let page = Math.max(1, parseInt(query.page) || 1);
+        let limit = Math.min(Math.max(1, parseInt(query.limit) || 5), 100); // Tối đa 100 items/trang
+        
         const filter = {};
         if (typeof query.status !== "undefined") {
             const normalized = query.status === true || query.status === "true";
@@ -33,27 +36,61 @@ const getCategories = async (query = {}) => {
         }
 
         // Xử lý sort theo ngày tạo
-        let sortOption = { createdAt: -1 }; // Mặc định sort theo thời gian tạo mới nhất
+        let sortOption = {}; // ✅ Mặc định KHÔNG sort gì cả
         const sortBy = (query.sortBy ?? "").toString().trim().toLowerCase();
-        const sortOrder = (query.sortOrder ?? "desc").toString().trim().toLowerCase();
+        const sortOrder = (query.sortOrder ?? "").toString().trim().toLowerCase();
         
-        if (sortBy === "createdat" || sortBy === "created") {
-            sortOption = { createdAt: sortOrder === "asc" ? 1 : -1 };
+        // ✅ Validation sortBy và sortOrder - Hỗ trợ trạng thái "mặc định"
+        const validSortFields = ["createdat", "created", "createdat", "name", "default", "none"];
+        const validSortOrders = ["asc", "desc"];
+        
+        const isValidSortBy = validSortFields.includes(sortBy);
+        const isValidSortOrder = validSortOrders.includes(sortOrder);
+        
+        // ✅ FIX: Xử lý sort logic với trạng thái mặc định
+        if (sortBy === "default" || sortBy === "none" || sortBy === "" || !sortBy) {
+            // Trạng thái mặc định - KHÔNG sort gì cả
+            sortOption = {};
+            console.log(`🔍 CategoryService sort - DEFAULT MODE: No sorting applied`);
+        } else if (isValidSortBy && isValidSortOrder) {
+            if (
+                sortBy === "createdat" ||
+                sortBy === "created" ||
+                sortBy === "createdat"
+            ) {
+                sortOption = { createdAt: sortOrder === "desc" ? -1 : 1 };
+            } else if (sortBy === "name") {
+                sortOption = { name: sortOrder === "desc" ? -1 : 1 };
+            }
         } else {
-            // Nếu không có sortBy hoặc sortBy không hợp lệ, dùng mặc định
-            sortOption = { createdAt: -1 };
+            // Nếu không có sortBy hoặc sortBy không hợp lệ, dùng mặc định (không sort)
+            sortOption = {};
         }
+        
+        // Debug logging
+        console.log(`🔍 CategoryService sort - sortBy: ${sortBy}, sortOrder: ${sortOrder}, sortOption:`, sortOption);
 
         const categories = await CategoryModel.find(filter)
             .sort(sortOption)
             .skip((page - 1) * limit)
-            .limit(Number(limit));
+            .limit(limit);
         const total = await CategoryModel.countDocuments(filter);
+        
+        const totalPages = Math.ceil(total / limit);
+        const hasNextPage = page < totalPages;
+        const hasPrevPage = page > 1;
         
         return { 
             status: "OK", 
             data: categories, 
-            pagination: { page: Number(page), limit: Number(limit), total } 
+            pagination: { 
+                page, 
+                limit, 
+                total, 
+                totalPages,
+                hasNextPage,
+                hasPrevPage
+            } 
         };
     } catch (error) {
         return { status: "ERR", message: error.message };

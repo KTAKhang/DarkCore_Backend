@@ -12,7 +12,7 @@ import {
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
-import { catalogAuth } from "../middleware/catalogAuth.js";
+
 
 dotenv.config();
 
@@ -50,7 +50,7 @@ app.use("/auth", authProxy);
 app.use("/cataloghome", cataloghomeProxy);
 
 // Catalog service - optional authentication (public + authenticated)
-app.use("/catalog", catalogAuth, catalogProxy);
+app.use("/catalog", gatewayAuth, catalogProxy);
 
 // Staff service (require JWT)
 app.use("/staff", gatewayAuth, staffProxy);
