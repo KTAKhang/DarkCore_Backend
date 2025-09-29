@@ -160,7 +160,7 @@ const sendRegisterOTP = async (req, res) => {
             return res.status(400).json({ status: "ERR", message: "Email không hợp lệ" });
         }
 
-        // Validate password (8 ký tự, có ít nhất 1 chữ hoa và 1 số)
+
         const isStrictPassword = (password) => {
             const regex = /^(?=.*[A-Z])(?=.*\d).{8,8}$/;
             return regex.test(password);
@@ -172,7 +172,7 @@ const sendRegisterOTP = async (req, res) => {
             });
         }
 
-        // Validate phone (VN: 9–11 digits, starts with 0)
+
         const isStrictPhone = (phone) => {
             const phoneRegex = /^0\d{8,10}$/;
             return phoneRegex.test(phone);
