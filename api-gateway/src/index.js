@@ -8,7 +8,8 @@ import {
     staffProxy,
     catalogProxy,
     cataloghomeProxy,
-    profileProxy
+    profileProxy,
+    customerProxy
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -57,6 +58,7 @@ app.use("/staff", gatewayAuth, staffProxy);
 
 
 app.use("/profile", gatewayAuth, profileProxy);
+app.use("/customer", gatewayAuth, customerProxy);
 
 // Catalog service (require JWT)
 app.use("/catalog", gatewayAuth, catalogProxy);
