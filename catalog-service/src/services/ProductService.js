@@ -20,13 +20,10 @@ const createProduct = async (payload) => {
 
         // ✅ FIX: Xử lý images từ upload middleware hoặc frontend
         if (payload.images) {
-            console.log(`🔍 Original images:`, typeof payload.images, payload.images);
-            
             if (typeof payload.images === "string") {
                 // Kiểm tra nếu là JSON string
                 try {
                     const parsed = JSON.parse(payload.images);
-                    console.log(`🔍 Parsed JSON:`, parsed);
                     payload.images = parsed; // Giữ nguyên parsed data
                 } catch (e) {
                     // Không phải JSON, là URL string thông thường
@@ -43,7 +40,6 @@ const createProduct = async (payload) => {
                         return img.url; // Object có URL
                     } else if (typeof img === "object" && img.uid) {
                         // Object chỉ có uid - tạo placeholder URL hoặc bỏ qua
-                        console.log(`⚠️ Image with uid ${img.uid} - no actual URL, creating placeholder`);
                         return `placeholder-${img.uid}`; // Placeholder URL
                     }
                     return null;
@@ -51,8 +47,6 @@ const createProduct = async (payload) => {
                 
                 payload.images = processedImages;
             }
-            
-            console.log(`🔍 Final images:`, payload.images);
         }
         
         if (payload.imagePublicIds) {
@@ -83,7 +77,9 @@ const createProduct = async (payload) => {
         }
 
         const product = await ProductModel.create(payload);
-        return { status: "OK", message: "Sản phẩm đã được tạo thành công", data: product };
+        // ✅ FIX: Populate category để trả về đầy đủ thông tin category như API getProducts
+        const populatedProduct = await ProductModel.findById(product._id).populate("category", "name status");
+        return { status: "OK", message: "Sản phẩm đã được tạo thành công", data: populatedProduct };
     } catch (error) {
         return { status: "ERR", message: error.message };
     }
@@ -134,36 +130,35 @@ const getProducts = async (query = {}) => {
         const sortOrder = (query.sortOrder ?? "").toString().trim().toLowerCase();
         
         // ✅ Validation sortBy và sortOrder - Hỗ trợ trạng thái "mặc định"
-        const validSortFields = ["price", "createdat", "created", "createdat", "name", "default", "none"];
+        const validSortFields = ["price", "createdat", "created", "name", "default", "none"];
         const validSortOrders = ["asc", "desc"];
         
+        // ✅ FIX: Logic validation cải thiện - chỉ cần sortBy hợp lệ, sortOrder có thể mặc định
         const isValidSortBy = validSortFields.includes(sortBy);
         const isValidSortOrder = validSortOrders.includes(sortOrder);
         
         // ✅ FIX: Xử lý sort logic với trạng thái mặc định
-        if (sortBy === "default" || sortBy === "none" || sortBy === "" || !sortBy) {
+        if (sortBy === "default" || sortBy === "none" || sortBy === "" || !sortBy || !isValidSortBy) {
             // Trạng thái mặc định - KHÔNG sort gì cả
             sortOption = {};
-            console.log(`🔍 ProductService sort - DEFAULT MODE: No sorting applied`);
-        } else if (isValidSortBy && isValidSortOrder) {
-            if (sortBy === "price") {
-                sortOption = { price: sortOrder === "desc" ? -1 : 1 };
-            } else if (
-                sortBy === "createdat" ||
-                sortBy === "created" ||
-                sortBy === "createdat"
-            ) {
-                sortOption = { createdAt: sortOrder === "desc" ? -1 : 1 };
-            } else if (sortBy === "name") {
-                sortOption = { name: sortOrder === "desc" ? -1 : 1 };
-            }
         } else {
-            // Nếu không có sortBy hoặc sortBy không hợp lệ, dùng mặc định (không sort)
-            sortOption = {};
+            // Có sortBy hợp lệ, xử lý sort
+            let actualSortOrder = "asc"; // Mặc định asc nếu sortOrder không hợp lệ
+            if (isValidSortOrder) {
+                actualSortOrder = sortOrder;
+            }
+            
+            if (sortBy === "price") {
+                sortOption = { price: actualSortOrder === "desc" ? -1 : 1 };
+            } else if (sortBy === "createdat" || sortBy === "created") {
+                sortOption = { createdAt: actualSortOrder === "desc" ? -1 : 1 };
+            } else if (sortBy === "name") {
+                sortOption = { name: actualSortOrder === "desc" ? -1 : 1 };
+            } else {
+                // Fallback - không sort
+                sortOption = {};
+            }
         }
-        
-        // Debug logging
-        console.log(`🔍 ProductService sort - sortBy: ${sortBy}, sortOrder: ${sortOrder}, sortOption:`, sortOption);
 
         // ✅ FIX: Populate đầy đủ category data bao gồm status
         const products = await ProductModel.find(filter)
@@ -231,13 +226,10 @@ const updateProduct = async (id, payload) => {
         }
         // ✅ FIX: Xử lý images từ upload middleware hoặc frontend
         if (payload.images) {
-            console.log(`🔍 Update - Original images:`, typeof payload.images, payload.images);
-            
             if (typeof payload.images === "string") {
                 // Kiểm tra nếu là JSON string
                 try {
                     const parsed = JSON.parse(payload.images);
-                    console.log(`🔍 Update - Parsed JSON:`, parsed);
                     payload.images = parsed; // Giữ nguyên parsed data
                 } catch (e) {
                     // Không phải JSON, là URL string thông thường
@@ -254,7 +246,6 @@ const updateProduct = async (id, payload) => {
                         return img.url; // Object có URL
                     } else if (typeof img === "object" && img.uid) {
                         // Object chỉ có uid - tạo placeholder URL hoặc bỏ qua
-                        console.log(`⚠️ Update - Image with uid ${img.uid} - no actual URL, creating placeholder`);
                         return `placeholder-${img.uid}`; // Placeholder URL
                     }
                     return null;
@@ -262,8 +253,6 @@ const updateProduct = async (id, payload) => {
                 
                 payload.images = processedImages;
             }
-            
-            console.log(`🔍 Update - Final images:`, payload.images);
         }
         
         if (payload.imagePublicIds) {
@@ -311,7 +300,9 @@ const updateProduct = async (id, payload) => {
 
         const updated = await ProductModel.findByIdAndUpdate(id, payload, { new: true });
         if (!updated) return { status: "ERR", message: "Không tìm thấy sản phẩm" };
-        return { status: "OK", message: "Sản phẩm đã được cập nhật thành công", data: updated };
+        // ✅ FIX: Populate category để trả về đầy đủ thông tin category như API getProducts
+        const populatedUpdated = await ProductModel.findById(updated._id).populate("category", "name status");
+        return { status: "OK", message: "Sản phẩm đã được cập nhật thành công", data: populatedUpdated };
     } catch (error) {
         return { status: "ERR", message: error.message };
     }
