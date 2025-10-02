@@ -56,7 +56,6 @@ const authMiddleware = async (req, res, next) => {
 
 // Middleware chỉ cần user login (không phân biệt role)
 const authUserMiddleware = (req, res, next) => {
-    console.log("req.user", req?.user)
     if (!req.user) {
         return res.status(401).json({ message: "No user data", status: "ERR" });
     }

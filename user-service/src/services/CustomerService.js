@@ -1,4 +1,5 @@
 const UserModel = require("../models/UserModel");
+const mongoose = require("mongoose");
 
 const updateUserStatus = async (id, status) => {
     try {
@@ -35,19 +36,25 @@ const updateUserStatus = async (id, status) => {
 };
 
 
+
 const getAllUser = (page, limit, search = "", filters = {}, sortOption = "desc") => {
     return new Promise(async (resolve, reject) => {
         try {
+            let query = {};
 
-            const query = search
-                ? {
-                    $or: [
-                        { user_name: { $regex: search, $options: "i" } },
-                        { email: { $regex: search, $options: "i" } },
-                    ],
+            if (search) {
+                const orConditions = [
+                    { user_name: { $regex: search, $options: "i" } },
+                    { email: { $regex: search, $options: "i" } },
+                ];
+
+                // Nếu search trùng với _id hợp lệ thì thêm vào query
+                if (mongoose.Types.ObjectId.isValid(search)) {
+                    orConditions.push({ _id: new mongoose.Types.ObjectId(search) });
                 }
-                : {};
 
+                query = { $or: orConditions };
+            }
 
             if (filters.isGoogleAccount !== undefined) {
                 query.isGoogleAccount = filters.isGoogleAccount;
@@ -56,17 +63,16 @@ const getAllUser = (page, limit, search = "", filters = {}, sortOption = "desc")
                 query.status = filters.status;
             }
 
-
             const listUser = await UserModel.find(query)
                 .populate({
                     path: "role_id",
                     select: "name -_id",
-                    match: { name: "customer" }
+                    match: { name: "customer" },
                 });
 
             let listUserData = listUser
-                .filter(user => user.role_id)
-                .map((user) => ({
+                .filter(user => user.role_id) // chỉ lấy user có role = customer
+                .map(user => ({
                     _id: user._id,
                     user_name: user.user_name,
                     email: user.email,
@@ -80,6 +86,7 @@ const getAllUser = (page, limit, search = "", filters = {}, sortOption = "desc")
                     updatedAt: user.updatedAt,
                 }));
 
+            // sort theo createdAt
             listUserData.sort((a, b) =>
                 sortOption === "asc"
                     ? new Date(a.createdAt) - new Date(b.createdAt)
@@ -115,6 +122,7 @@ const getAllUser = (page, limit, search = "", filters = {}, sortOption = "desc")
         }
     });
 };
+
 
 
 
