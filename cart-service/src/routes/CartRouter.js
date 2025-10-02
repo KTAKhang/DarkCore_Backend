@@ -11,22 +11,22 @@ const {
 router.use(attachUserFromHeader);
 
 // Lấy giỏ hàng
-router.get("/", authUserMiddleware, CartController.getCart);
+router.get("/", authRoleMiddleware("customer"), CartController.getCart);
 
 // Thêm sản phẩm vào giỏ hàng
-router.post("/add", authUserMiddleware, CartController.addItem);
+router.post("/add", authRoleMiddleware("customer"), CartController.addItem);
 
 // Cập nhật số lượng sản phẩm
-router.put("/update/:productId", authUserMiddleware, CartController.updateItem);
+router.put("/update/:productId", authRoleMiddleware("customer"), CartController.updateItem);
 
 // Xóa sản phẩm khỏi giỏ hàng
 router.delete(
   "/remove/:productId",
-  authUserMiddleware,
+  authRoleMiddleware("customer"),
   CartController.removeItem
 );
 
 // Xóa toàn bộ giỏ hàng
-router.delete("/clear", authUserMiddleware, CartController.clearCart);
+router.delete("/clear", authRoleMiddleware("customer"), CartController.clearCart);
 
 module.exports = router;
