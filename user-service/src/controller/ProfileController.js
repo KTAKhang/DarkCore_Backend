@@ -25,11 +25,9 @@ const updateProfile = async (req, res) => {
         const data = req.body;
         const file = req.file;
 
-
         if (!req.user || !req.user._id) {
             return res.status(401).json({ status: "ERR", message: "Unauthorized" });
         }
-
 
         const userID = req.user._id;
         const roleResult = await checkRole(userID);
@@ -39,13 +37,23 @@ const updateProfile = async (req, res) => {
         }
 
         if (roleResult.role !== "admin" && userID !== id) {
-            return res
-                .status(200)
-                .json({ status: "ERR", message: "You are not authorized" });
+            return res.status(403).json({ status: "ERR", message: "You are not authorized" });
         }
 
         if (!id) {
             return res.status(400).json({ status: "ERR", message: "User ID is required" });
+        }
+
+
+        if (file) {
+            const maxSize = 3 * 1024 * 1024;
+            if (file.size > maxSize) {
+                return res.status(400).json({ status: "ERR", message: "File size must be under 3MB" });
+            }
+            const allowedTypes = ["image/jpeg", "image/png"];
+            if (!allowedTypes.includes(file.mimetype)) {
+                return res.status(400).json({ status: "ERR", message: "Only JPG, PNG images are allowed" });
+            }
         }
 
         const response = await ProfileService.updateProfile(id, data, file, roleResult.role);
@@ -56,6 +64,7 @@ const updateProfile = async (req, res) => {
         return res.status(500).json({ status: "ERR", message: "Server error", detail: error.message });
     }
 };
+
 
 const getUserById = async (req, res) => {
     try {
