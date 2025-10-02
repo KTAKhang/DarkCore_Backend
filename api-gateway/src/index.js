@@ -4,11 +4,12 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 
 import {
-    authProxy,
-    staffProxy,
-    catalogProxy,
-    cataloghomeProxy,
-    profileProxy
+  authProxy,
+  staffProxy,
+  catalogProxy,
+  cataloghomeProxy,
+  profileProxy,
+  cartProxy,
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -23,25 +24,28 @@ const PORT = process.env.PORT || 3000;
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 app.use(
-    cors({
-        origin: FRONTEND_URL, // ✅ Dùng URL cụ thể thay vì wildcard
-        credentials: true, // ✅ Cho phép gửi cookie/credentials
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowedHeaders: [
-            "Origin",
-            "X-Requested-With",
-            "Content-Type",
-            "Accept",
-            "Authorization",
-        ],
-    })
+  cors({
+    origin: FRONTEND_URL, // ✅ Dùng URL cụ thể thay vì wildcard
+    credentials: true, // ✅ Cho phép gửi cookie/credentials
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Origin",
+      "X-Requested-With",
+      "Content-Type",
+      "Accept",
+      "Authorization",
+    ],
+  })
 );
 
 // Xử lý preflight OPTIONS cho tất cả routes
-app.options("*", cors({
+app.options(
+  "*",
+  cors({
     origin: FRONTEND_URL,
-    credentials: true
-}));
+    credentials: true,
+  })
+);
 
 app.use(morgan("dev"));
 
@@ -55,6 +59,7 @@ app.use("/catalog", catalogAuth, catalogProxy);
 // Staff service (require JWT)
 app.use("/staff", gatewayAuth, staffProxy);
 
+app.use("/cart", gatewayAuth, cartProxy);
 
 app.use("/profile", gatewayAuth, profileProxy);
 
@@ -63,12 +68,17 @@ app.use("/catalog", gatewayAuth, catalogProxy);
 
 // Root endpoint
 app.get("/", (req, res) => {
-    res.send("🚀 API Gateway is running");
+  res.send("🚀 API Gateway is running");
 });
 
 app.listen(PORT, () => {
-    console.log(`✅ API Gateway running at http://localhost:${PORT}`);
+  console.log(`✅ API Gateway running at http://localhost:${PORT}`);
 
-    console.log(`🔧 Targets → AUTH: ${process.env.AUTH_SERVICE_URL || 'http://localhost:3001'}, STAFF: ${process.env.STAFF_SERVICE_URL || 'http://localhost:3003'}, CATALOG: ${process.env.CATALOG_SERVICE_URL || 'http://localhost:3004'}`);
+  console.log(
+    `🔧 Targets → AUTH: ${
+      process.env.AUTH_SERVICE_URL || "http://localhost:3001"
+    }, STAFF: ${
+      process.env.STAFF_SERVICE_URL || "http://localhost:3003"
+    }, CATALOG: ${process.env.CATALOG_SERVICE_URL || "http://localhost:3004"}`
+  );
 }); // ✅ FIX: Thêm dấu đóng ngoặc
-
