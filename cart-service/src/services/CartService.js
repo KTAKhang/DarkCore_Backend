@@ -1,5 +1,7 @@
 const Cart = require("../models/CartModel");
+const mongoose = require("mongoose");
 
+<<<<<<< HEAD
 class CartService {
  
   static async getCart(userId) {
@@ -16,9 +18,49 @@ class CartService {
     if (!productId || !quantity) {
       throw new Error("Missing productId or quantity");
     }
+=======
+// ======================
+// Helpers
+// ======================
+const _createCart = async (userId) => {
+  const cart = new Cart({ userId, items: [], total: 0, status: "active" });
+  await cart.save();
+  return cart;
+};
 
-    let cart = await Cart.findOne({ userId });
+const _calculateTotal = (cart) => {
+  return cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+};
 
+// ======================
+// Cart Functions
+// ======================
+const getCart = async (userId) => {
+  let cart = await Cart.findOne({ userId, status: "active" });
+  if (!cart) cart = await _createCart(userId);
+
+  return { status: "OK", cart };
+};
+
+const addItem = async (userId, productId, name, price, quantity, image) => {
+  if (
+    !productId ||
+    !quantity ||
+    quantity < 1 ||
+    !mongoose.isValidObjectId(productId)
+  ) {
+    throw new Error("Valid productId and quantity (>=1) are required");
+  }
+
+  let cart = await Cart.findOne({ userId, status: "active" });
+  if (!cart) cart = await _createCart(userId);
+>>>>>>> 7250971 (cartDone)
+
+  const itemIndex = cart.items.findIndex(
+    (item) => item.productId.toString() === productId.toString()
+  );
+
+<<<<<<< HEAD
     if (!cart) {
       cart = new Cart({ userId, items: [] });
     }
@@ -44,36 +86,86 @@ class CartService {
   static async updateItem(userId, itemId, quantity) {
     const cart = await Cart.findOne({ userId });
     if (!cart) throw new Error("Cart not found");
-
-    const item = cart.items.id(itemId);
-    if (!item) throw new Error("Item not found");
-
-    item.quantity = quantity;
-    await cart.save();
-    return cart;
+=======
+  if (itemIndex > -1) {
+    cart.items[itemIndex].quantity += quantity;
+  } else {
+    cart.items.push({ productId, name, price, quantity, image });
   }
 
+  cart.total = _calculateTotal(cart);
+  await cart.save();
+>>>>>>> 7250971 (cartDone)
+
+  return { status: "OK", message: "Item added", cart };
+};
+
+const updateItem = async (userId, productId, quantity) => {
+  if (
+    !productId ||
+    !quantity ||
+    quantity < 1 ||
+    !mongoose.isValidObjectId(productId)
+  ) {
+    throw new Error("Valid productId and quantity (>=1) are required");
+  }
+
+<<<<<<< HEAD
   
   static async removeItem(userId, itemId) {
     const cart = await Cart.findOne({ userId });
     if (!cart) throw new Error("Cart not found");
+=======
+  const cart = await Cart.findOne({ userId, status: "active" });
+  if (!cart) throw new Error("Cart not found or not active");
+>>>>>>> 7250971 (cartDone)
 
-    cart.items = cart.items.filter((item) => item._id.toString() !== itemId);
-    await cart.save();
-    return cart;
+  const itemIndex = cart.items.findIndex(
+    (item) => item.productId.toString() === productId.toString()
+  );
+  if (itemIndex === -1) throw new Error("Item not found in cart");
+
+  cart.items[itemIndex].quantity = quantity;
+  cart.total = _calculateTotal(cart);
+  await cart.save();
+
+  return { status: "OK", message: "Item updated", cart };
+};
+
+const removeItem = async (userId, productId) => {
+  if (!productId || !mongoose.isValidObjectId(productId)) {
+    throw new Error("Valid productId is required");
   }
 
+<<<<<<< HEAD
   
   static async clearCart(userId) {
     const cart = await Cart.findOne({ userId });
     if (!cart) throw new Error("Cart not found");
+=======
+  const cart = await Cart.findOne({ userId, status: "active" });
+  if (!cart) throw new Error("Cart not found or not active");
+>>>>>>> 7250971 (cartDone)
 
+  cart.items = cart.items.filter(
+    (item) => item.productId.toString() !== productId.toString()
+  );
+  cart.total = _calculateTotal(cart);
+  await cart.save();
+
+  return { status: "OK", message: "Item removed", cart };
+};
+
+const clearCart = async (userId) => {
+  let cart = await Cart.findOne({ userId, status: "active" });
+  if (!cart) cart = await _createCart(userId);
+  else {
     cart.items = [];
-    await cart.save();
-    return cart;
+    cart.total = 0;
+    cart.status = "checked_out";
   }
-}
 
+<<<<<<< HEAD
 module.exports = CartService;
 // const Cart = require("../models/CartModel");
 
@@ -154,3 +246,19 @@ module.exports = CartService;
 // }
 
 // module.exports = CartService;
+=======
+  await cart.save();
+  return { status: "OK", message: "Cart cleared", cart };
+};
+
+// ======================
+// Export theo CommonJS
+// ======================
+module.exports = {
+  getCart,
+  addItem,
+  updateItem,
+  removeItem,
+  clearCart,
+};
+>>>>>>> 7250971 (cartDone)

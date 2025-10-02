@@ -11,6 +11,27 @@ export const authProxy = createProxyMiddleware("/auth", {
   target: process.env.AUTH_SERVICE_URL || "http://localhost:3001",
   changeOrigin: true,
   pathRewrite: { "^/auth": "" },
+<<<<<<< HEAD
+=======
+
+  // ✅ Forward cookies
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+  },
+
+  // ✅ Forward CORS + Set-Cookie từ BE → FE
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+
+  onError: function (err, req, res) {
+    res.status(500).send("Auth service unavailable");
+  },
+>>>>>>> 7250971 (cartDone)
 });
 
 // Catalog Service (handles both products and categories)
@@ -26,17 +47,47 @@ export const staffProxy = createProxyMiddleware("/staff", {
   changeOrigin: true,
   pathRewrite: { "^/staff": "" },
 });
+<<<<<<< HEAD
+=======
+export const profileProxy = createProxyMiddleware("/profile", {
+  target: process.env.USER_SERVICE_URL || "http://localhost:3210",
+  changeOrigin: true,
+  pathRewrite: { "^/profile": "" },
+});
+
+export const customerProxy = createProxyMiddleware("/customer", {
+  target: process.env.USER_SERVICE_URL || "http://localhost:3210",
+  changeOrigin: true,
+  pathRewrite: { "^/customer": "" },
+});
+// Staff Service///
+
+>>>>>>> 7250971 (cartDone)
 // Catalog Home Service
 export const cataloghomeProxy = createProxyMiddleware("/cataloghome", {
   target: process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004",
   changeOrigin: true,
   pathRewrite: { "^/cataloghome": "" },
+<<<<<<< HEAD
 });
 // Cart Service
 export const cartProxy = createProxyMiddleware("/cart", {
   target: process.env.CART_SERVICE_URL || "http://localhost:3005",
   changeOrigin: true,
   pathRewrite: { "^/cart": "" },
+=======
+>>>>>>> 7250971 (cartDone)
 });
 
+export const cartProxy = createProxyMiddleware("/cart", {
+  target: process.env.CART_SERVICE_URL || "http://localhost:3005",
+  changeOrigin: true,
+  pathRewrite: { "^/cart": "" },
+});
+
+export const newsProxy = createProxyMiddleware("/news", {
+  target: process.env.NEW_SERVICE_URL || "http://localhost:3008",
+  changeOrigin: true,
+  pathRewrite: { "^/news": "" },
+});
 export default router;

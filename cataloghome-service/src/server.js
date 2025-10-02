@@ -8,11 +8,8 @@ const swaggerDocs = require("./swagger");
 
 dotenv.config();
 
-
-
 const app = express();
-const port = process.env.PORT || 3000;
-
+const port = process.env.PORT || 3004;
 
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -22,15 +19,15 @@ routes(app);
 swaggerDocs(app);
 
 mongoose
-    .connect(process.env.MONGO_URL)
-    .then(() => {
-        console.log(" Connected to MongoDB");
-        console.log(` Swagger Docs available at http://localhost:${port}/api-docs`);
-    })
-    .catch((error) => {
-        console.error(" MongoDB connection error:", error);
-    });
+  .connect(process.env.MONGO_URL)
+  .then(() => {
+    console.log(" Connected to MongoDB");
+    console.log(` Swagger Docs available at http://localhost:${port}/api-docs`);
+  })
+  .catch((error) => {
+    console.error(" MongoDB connection error:", error);
+  });
 
 app.listen(port, () => {
-    console.log(` Server is running on http://localhost:${port}`);
+  console.log(` Server is running on http://localhost:${port}`);
 });
