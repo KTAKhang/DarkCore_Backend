@@ -9,20 +9,20 @@ const app = express();
 const cartRouter = require("./routes/CartRouter");
 
 // Middleware
-app.use(cors());
+// app.use(cors());
 app.use(express.json());
 
 // Kết nối MongoDB
 mongoose
-  .connect(process.env.MONGO_URL)
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Connected to MongoDB (Cart Service)"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // Routes
-app.use("/api/cart", cartRouter);
+app.use("/", cartRouter);
 
 // Server listen
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3005;
 app.listen(PORT, () => {
   console.log(`🛒 Cart Service running on port ${PORT}`);
 });
