@@ -140,9 +140,8 @@ const sendRegisterOTP = async (req, res) => {
             });
         }
 
-        // Validate user_name (3–30 ký tự, không ký tự đặc biệt ngoài _ và khoảng trắng)
         const isStrictUserName = (name) => {
-            const regex = /^[a-zA-Z0-9_ ]{3,30}$/;
+            const regex = /^[\p{L}\p{N}_ ]{3,30}$/u;
             return regex.test(name);
         };
         if (!isStrictUserName(user_name)) {
@@ -161,19 +160,19 @@ const sendRegisterOTP = async (req, res) => {
             return res.status(400).json({ status: "ERR", message: "Email không hợp lệ" });
         }
 
-        // Validate password (8 ký tự, có ít nhất 1 chữ hoa và 1 số)
+
         const isStrictPassword = (password) => {
-            const regex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+            const regex = /^(?=.*[A-Z])(?=.*\d).{8,8}$/;
             return regex.test(password);
         };
         if (!isStrictPassword(password)) {
             return res.status(400).json({
                 status: "ERR",
-                message: "Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa và số",
+                message: "Mật khẩu phải chứa 8 ký tự, bao gồm chữ hoa và số",
             });
         }
 
-        // Validate phone (VN: 9–11 digits, starts with 0)
+
         const isStrictPhone = (phone) => {
             const phoneRegex = /^0\d{8,10}$/;
             return phoneRegex.test(phone);
@@ -187,7 +186,7 @@ const sendRegisterOTP = async (req, res) => {
 
         // Validate address (5–100 ký tự, cho phép chữ, số, dấu , . - và khoảng trắng)
         const isStrictAddress = (addr) => {
-            const regex = /^[a-zA-Z0-9\s,.-]{5,100}$/;
+            const regex = /^[\p{L}\p{N}\s,.\-\/]{5,100}$/u;
             return regex.test(addr);
         };
         if (!isStrictAddress(address)) {

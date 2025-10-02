@@ -4,16 +4,17 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 
 import {
-  authProxy,
-  staffProxy,
-  catalogProxy,
-  cataloghomeProxy,
-  profileProxy,
-  cartProxy,
+    authProxy,
+    staffProxy,
+    catalogProxy,
+    cataloghomeProxy,
+    profileProxy,
+    customerProxy,
+    cartProxy,
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
-import { catalogAuth } from "../middleware/catalogAuth.js";
+
 
 dotenv.config();
 
@@ -54,7 +55,7 @@ app.use("/auth", authProxy);
 app.use("/cataloghome", cataloghomeProxy);
 
 // Catalog service - optional authentication (public + authenticated)
-app.use("/catalog", catalogAuth, catalogProxy);
+app.use("/catalog", gatewayAuth, catalogProxy);
 
 // Staff service (require JWT)
 app.use("/staff", gatewayAuth, staffProxy);
@@ -62,6 +63,7 @@ app.use("/staff", gatewayAuth, staffProxy);
 app.use("/cart", gatewayAuth, cartProxy);
 
 app.use("/profile", gatewayAuth, profileProxy);
+app.use("/customer", gatewayAuth, customerProxy);
 
 // Catalog service (require JWT)
 app.use("/catalog", gatewayAuth, catalogProxy);
