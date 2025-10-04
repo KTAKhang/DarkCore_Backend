@@ -1,7 +1,6 @@
 const express = require("express");
 const ProductController = require("../controller/ProductController");
 const { uploadProductImages } = require("../middleware/uploadMiddleware");
-const { authAdminSalesMiddleware } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -10,10 +9,10 @@ router.get("/products/stats", ProductController.stats);
 router.get("/products", ProductController.list);
 router.get("/products/:id", ProductController.detail);
 
-// Product management routes (chỉ admin và sales-staff)
-router.post("/products", authAdminSalesMiddleware, uploadProductImages, ProductController.create);
-router.put("/products/:id", authAdminSalesMiddleware, uploadProductImages, ProductController.update);
-router.delete("/products/:id", authAdminSalesMiddleware, ProductController.remove);
+// Product management routes
+router.post("/products", uploadProductImages, ProductController.create);
+router.put("/products/:id", uploadProductImages, ProductController.update);
+router.delete("/products/:id", ProductController.remove);
 
 // ✅ Test endpoint để debug upload
 router.post("/products/test-upload", uploadProductImages, (req, res) => {
