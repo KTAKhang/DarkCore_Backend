@@ -51,7 +51,6 @@ const getCategories = async (query = {}) => {
         if (sortBy === "default" || sortBy === "none" || sortBy === "" || !sortBy) {
             // Trạng thái mặc định - KHÔNG sort gì cả
             sortOption = {};
-            console.log(`🔍 CategoryService sort - DEFAULT MODE: No sorting applied`);
         } else if (isValidSortBy && isValidSortOrder) {
             if (
                 sortBy === "createdat" ||
@@ -66,9 +65,6 @@ const getCategories = async (query = {}) => {
             // Nếu không có sortBy hoặc sortBy không hợp lệ, dùng mặc định (không sort)
             sortOption = {};
         }
-        
-        // Debug logging
-        console.log(`🔍 CategoryService sort - sortBy: ${sortBy}, sortOrder: ${sortOrder}, sortOption:`, sortOption);
 
         const categories = await CategoryModel.find(filter)
             .sort(sortOption)
