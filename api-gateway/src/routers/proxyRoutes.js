@@ -69,4 +69,10 @@ export const cartProxy = createProxyMiddleware("/cart", {
   changeOrigin: true,
   pathRewrite: { "^/cart": "" },
 });
+
+export const newsProxy = createProxyMiddleware("/news", {
+  target: process.env.NEWS_SERVICE_URL || "http://localhost:3008",
+  changeOrigin: true,
+  pathRewrite: { "^/news": "" },
+});
 export default router;

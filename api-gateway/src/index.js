@@ -11,6 +11,7 @@ import {
     profileProxy,
     customerProxy,
     cartProxy,
+    newsProxy,
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -67,7 +68,7 @@ app.use("/customer", gatewayAuth, customerProxy);
 
 // Catalog service (require JWT)
 app.use("/catalog", gatewayAuth, catalogProxy);
-
+app.use("/news", gatewayAuth, newsProxy);
 // Root endpoint
 app.get("/", (req, res) => {
   res.send("🚀 API Gateway is running");
@@ -81,6 +82,7 @@ app.listen(PORT, () => {
       process.env.AUTH_SERVICE_URL || "http://localhost:3001"
     }, STAFF: ${
       process.env.STAFF_SERVICE_URL || "http://localhost:3003"
-    }, CATALOG: ${process.env.CATALOG_SERVICE_URL || "http://localhost:3004"}`
+    }, CATALOG: ${process.env.CATALOG_SERVICE_URL || "http://localhost:3004"},
+    , NEWS: ${process.env.NEWS_SERVICE_URL || "http://localhost:3008"}`
   );
 }); // ✅ FIX: Thêm dấu đóng ngoặc
