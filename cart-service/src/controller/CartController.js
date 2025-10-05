@@ -58,7 +58,7 @@ const addItem = async (req, res) => {
       product.images?.[0] || null // 👉 truyền thêm ảnh
     );
 
-    res.json(result);
+    res.status(result.status === "OK" ? 201 : 400).json(result);
   } catch (err) {
     res.status(400).json({ status: "ERR", message: err.message });
   }
@@ -77,7 +77,7 @@ const updateItem = async (req, res) => {
       productId,
       quantity
     );
-    res.json(result);
+    res.status(result.status === "OK" ? 200 : 400).json(result);
   } catch (err) {
     res.status(400).json({ status: "ERR", message: err.message });
   }
@@ -92,7 +92,7 @@ const removeItem = async (req, res) => {
     }
 
     const result = await CartService.removeItem(req.user._id, productId);
-    res.json(result);
+    res.status(result.status === "OK" ? 200 : 400).json(result);
   } catch (err) {
     res.status(400).json({ status: "ERR", message: err.message });
   }
@@ -101,7 +101,7 @@ const removeItem = async (req, res) => {
 const clearCart = async (req, res) => {
   try {
     const result = await CartService.clearCart(req.user._id);
-    res.json(result);
+    res.status(result.status === "OK" ? 200 : 400).json(result);
   } catch (err) {
     res.status(400).json({ status: "ERR", message: err.message });
   }
