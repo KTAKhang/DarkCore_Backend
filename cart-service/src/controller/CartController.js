@@ -1,6 +1,21 @@
 const mongoose = require("mongoose");
 const CartService = require("../services/CartService");
 const Product = require("../models/Product");
+const User = require("../models/UserModel");
+
+// ======================
+// Helper validate userId
+// ======================
+const _validateUser = async (userId) => {
+  if (!mongoose.isValidObjectId(userId)) {
+    throw new Error("Invalid userId");
+  }
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new Error("User not found");
+  }
+  return user;
+};
 
 // ======================
 // Helper validate productId & quantity
@@ -35,6 +50,8 @@ const _getProduct = async (productId, quantity) => {
 // ======================
 const getCart = async (req, res) => {
   try {
+    await _validateUser(req.user._id);
+
     const result = await CartService.getCart(req.user._id);
     res.status(result.status === "OK" ? 200 : 404).json(result);
   } catch (err) {
@@ -44,6 +61,8 @@ const getCart = async (req, res) => {
 
 const addItem = async (req, res) => {
   try {
+    await _validateUser(req.user._id);
+
     const { productId, quantity } = req.body;
 
     _validateProductInput(productId, quantity);
@@ -55,7 +74,7 @@ const addItem = async (req, res) => {
       product.name,
       product.price,
       quantity,
-      product.images?.[0] || null // 👉 truyền thêm ảnh
+      product.images?.[0] || null
     );
 
     res.status(result.status === "OK" ? 201 : 400).json(result);
@@ -66,6 +85,8 @@ const addItem = async (req, res) => {
 
 const updateItem = async (req, res) => {
   try {
+    await _validateUser(req.user._id);
+
     const { productId } = req.params;
     const { quantity } = req.body;
 
@@ -85,6 +106,8 @@ const updateItem = async (req, res) => {
 
 const removeItem = async (req, res) => {
   try {
+    await _validateUser(req.user._id);
+
     const { productId } = req.params;
 
     if (!productId || !mongoose.isValidObjectId(productId)) {
@@ -100,6 +123,8 @@ const removeItem = async (req, res) => {
 
 const clearCart = async (req, res) => {
   try {
+    await _validateUser(req.user._id);
+
     const result = await CartService.clearCart(req.user._id);
     res.status(result.status === "OK" ? 200 : 400).json(result);
   } catch (err) {
