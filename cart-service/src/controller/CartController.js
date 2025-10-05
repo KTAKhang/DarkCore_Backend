@@ -25,9 +25,7 @@ const _getProduct = async (productId, quantity) => {
     throw new Error("Product not found or invalid");
   }
   if (quantity > product.stockQuantity) {
-    throw new Error(
-      `Quantity ${quantity} exceeds stock ${product.stockQuantity}`
-    );
+    throw new Error(`Sản phẩm chỉ còn ${product.stockQuantity} trong kho`);
   }
   return product;
 };

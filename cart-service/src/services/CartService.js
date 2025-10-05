@@ -1,4 +1,5 @@
 const Cart = require("../models/CartModel");
+const Product = require("../models/Product");
 const mongoose = require("mongoose");
 
 // ======================
@@ -34,6 +35,10 @@ const addItem = async (userId, productId, name, price, quantity, image) => {
     throw new Error("Valid productId and quantity (>=1) are required");
   }
 
+  // Lấy product từ DB để check stock
+  const product = await Product.findById(productId);
+  if (!product) throw new Error("Product not found");
+
   let cart = await Cart.findOne({ userId, status: "active" });
   if (!cart) cart = await _createCart(userId);
 
@@ -42,8 +47,19 @@ const addItem = async (userId, productId, name, price, quantity, image) => {
   );
 
   if (itemIndex > -1) {
-    cart.items[itemIndex].quantity += quantity;
+    const newQuantity = cart.items[itemIndex].quantity + quantity;
+    if (newQuantity > product.stockQuantity) {
+      throw new Error(
+        `Quantity ${newQuantity} exceeds stock ${product.stockQuantity}`
+      );
+    }
+    cart.items[itemIndex].quantity = newQuantity;
   } else {
+    if (quantity > product.stockQuantity) {
+      throw new Error(
+        `Quantity ${quantity} exceeds stock ${product.stockQuantity}`
+      );
+    }
     cart.items.push({ productId, name, price, quantity, image });
   }
 
@@ -61,6 +77,14 @@ const updateItem = async (userId, productId, quantity) => {
     !mongoose.isValidObjectId(productId)
   ) {
     throw new Error("Valid productId and quantity (>=1) are required");
+  }
+
+  const product = await Product.findById(productId);
+  if (!product) throw new Error("Product not found");
+  if (quantity > product.stockQuantity) {
+    throw new Error(
+      `Quantity ${quantity} exceeds stock ${product.stockQuantity}`
+    );
   }
 
   const cart = await Cart.findOne({ userId, status: "active" });
