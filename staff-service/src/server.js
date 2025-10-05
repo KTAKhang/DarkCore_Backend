@@ -8,7 +8,7 @@ const staffRouter = require('./routes/StaffRouter');
 // CORS middleware
 app.use(cors());
 
-mongoose.connect(process.env.MONGO_URL || 'mongodb://localhost:27017/darkcore')
+mongoose.connect(process.env.MONGO_URL )
     .then(() => console.log('✅ Connected to MongoDB'))
     .catch((err) => console.error('❌ MongoDB connection error:', err));
 

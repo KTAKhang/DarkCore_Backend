@@ -65,4 +65,11 @@ export const cataloghomeProxy = createProxyMiddleware("/cataloghome", {
     pathRewrite: { "^/cataloghome": "" },
 });
 
+// Repair Service
+export const repairProxy = createProxyMiddleware("/repair", {
+    target: process.env.REPAIR_SERVICE_URL || "http://localhost:4006",
+    changeOrigin: true,
+    pathRewrite: { "^/repair": "" },
+});
+
 export default router;

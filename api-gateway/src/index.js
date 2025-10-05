@@ -8,7 +8,8 @@ import {
     staffProxy,
     catalogProxy,
     cataloghomeProxy,
-    profileProxy
+    profileProxy,
+    repairProxy
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -26,7 +27,7 @@ app.use(
     cors({
         origin: FRONTEND_URL, // ✅ Dùng URL cụ thể thay vì wildcard
         credentials: true, // ✅ Cho phép gửi cookie/credentials
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allowedHeaders: [
             "Origin",
             "X-Requested-With",
@@ -58,6 +59,9 @@ app.use("/staff", gatewayAuth, staffProxy);
 
 app.use("/profile", gatewayAuth, profileProxy);
 
+// Repair service (require JWT for all routes; can relax per need)
+app.use("/repair", gatewayAuth, repairProxy);
+
 // Catalog service (require JWT)
 app.use("/catalog", gatewayAuth, catalogProxy);
 
@@ -69,6 +73,6 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
     console.log(`✅ API Gateway running at http://localhost:${PORT}`);
 
-    console.log(`🔧 Targets → AUTH: ${process.env.AUTH_SERVICE_URL || 'http://localhost:3001'}, STAFF: ${process.env.STAFF_SERVICE_URL || 'http://localhost:3003'}, CATALOG: ${process.env.CATALOG_SERVICE_URL || 'http://localhost:3004'}`);
+    console.log(`🔧 Targets → AUTH: ${process.env.AUTH_SERVICE_URL || 'http://localhost:3001'}, STAFF: ${process.env.STAFF_SERVICE_URL || 'http://localhost:3003'}, CATALOG: ${process.env.CATALOG_SERVICE_URL || 'http://localhost:3004'}, REPAIR: ${process.env.REPAIR_SERVICE_URL || 'http://localhost:4006'}`);
 }); // ✅ FIX: Thêm dấu đóng ngoặc
 
