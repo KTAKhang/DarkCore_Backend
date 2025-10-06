@@ -44,6 +44,7 @@ export const staffProxy = createProxyMiddleware("/staff", {
   changeOrigin: true,
   pathRewrite: { "^/staff": "" },
 });
+
 export const profileProxy = createProxyMiddleware("/profile", {
   target: process.env.USER_SERVICE_URL || "http://localhost:3210",
   changeOrigin: true,
@@ -55,7 +56,6 @@ export const customerProxy = createProxyMiddleware("/customer", {
   changeOrigin: true,
   pathRewrite: { "^/customer": "" },
 });
-// Staff Service///
 
 // Catalog Home Service
 export const cataloghomeProxy = createProxyMiddleware("/cataloghome", {
@@ -75,4 +75,30 @@ export const newsProxy = createProxyMiddleware("/news", {
   changeOrigin: true,
   pathRewrite: { "^/news": "" },
 });
+
+// Order Service Proxy
+export const orderProxy = createProxyMiddleware("/api", {
+  target: process.env.ORDER_SERVICE_URL || "http://localhost:3010",
+  changeOrigin: true,
+  pathRewrite: { "^/api": "/api" },
+
+  // ✅ Forward cookies
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+  },
+
+  // ✅ Forward CORS + Set-Cookie từ BE → FE
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+
+  onError: function (err, req, res) {
+    res.status(500).send("Order service unavailable");
+  },
+});
+
 export default router;

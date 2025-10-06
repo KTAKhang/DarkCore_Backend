@@ -12,10 +12,10 @@ import {
     customerProxy,
     cartProxy,
     newsProxy,
+    orderProxy, // ✅ Thêm import order proxy
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
-
 
 dotenv.config();
 
@@ -66,9 +66,12 @@ app.use("/cart", gatewayAuth, cartProxy);
 app.use("/profile", gatewayAuth, profileProxy);
 app.use("/customer", gatewayAuth, customerProxy);
 
-// Catalog service (require JWT)
-app.use("/catalog", gatewayAuth, catalogProxy);
+// Order service (require JWT)
+app.use("/api", gatewayAuth, orderProxy);
+
+// News service (require JWT)
 app.use("/news", gatewayAuth, newsProxy);
+
 // Root endpoint
 app.get("/", (req, res) => {
   res.send("🚀 API Gateway is running");
@@ -83,6 +86,7 @@ app.listen(PORT, () => {
     }, STAFF: ${
       process.env.STAFF_SERVICE_URL || "http://localhost:3003"
     }, CATALOG: ${process.env.CATALOG_SERVICE_URL || "http://localhost:3004"},
-    , NEWS: ${process.env.NEWS_SERVICE_URL || "http://localhost:3008"}`
+    , NEWS: ${process.env.NEWS_SERVICE_URL || "http://localhost:3008"}
+    , ORDER: ${process.env.ORDER_SERVICE_URL || "http://localhost:3010"}` // ✅ Thêm order service
   );
-}); // ✅ FIX: Thêm dấu đóng ngoặc
+});
