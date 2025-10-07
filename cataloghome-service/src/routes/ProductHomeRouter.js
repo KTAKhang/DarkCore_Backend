@@ -7,9 +7,7 @@ const router = express.Router();
 router.get("/producthome", ProductHomeController.list);
 router.get("/producthome/featured", ProductHomeController.featured);
 router.get("/producthome/brands", ProductHomeController.brands);
-router.get("/producthome/favorites", ProductHomeController.favorites); // Route lấy danh sách yêu thích
 router.get("/producthome/:id", ProductHomeController.detail);
 router.get("/producthome/category/:categoryId", ProductHomeController.getByCategory);
-router.put("/producthome/:id/favorite", ProductHomeController.toggleFavorite); // Route toggle favorite
 
 module.exports = router;

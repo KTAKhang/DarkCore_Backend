@@ -11,7 +11,16 @@ const options = {
         },
         servers: [
             {
-                url: "https://youtube-fullstack-nodejs-forbeginer.onrender.com/api",
+                url: "http://localhost:3010",
+                description: "Local Development Server"
+            },
+            {
+                url: "http://localhost:3000/order",
+                description: "Via API Gateway (Local)"
+            },
+            {
+                url: "https://youtube-fullstack-nodejs-forbeginer.onrender.com/order",
+                description: "Production Server"
             },
         ],
         components: {
