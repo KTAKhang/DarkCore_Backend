@@ -14,6 +14,7 @@ import {
   newsProxy,
   orderProxy,
   favoriteProxy, // ✅ Thêm import
+  repairProxy
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -26,6 +27,7 @@ const PORT = process.env.PORT || 3000;
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 app.use(
+
   cors({
     origin: FRONTEND_URL,
     credentials: true,
@@ -68,6 +70,9 @@ app.use("/cart", gatewayAuth, cartProxy);
 app.use("/profile", gatewayAuth, profileProxy);
 app.use("/customer", gatewayAuth, customerProxy);
 
+
+// Repair service (require JWT for all routes; can relax per need)
+app.use("/repair", gatewayAuth, repairProxy);
 // Order service (require JWT)
 app.use("/order", gatewayAuth, orderProxy);
 
@@ -79,6 +84,7 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => {
+
   console.log(`✅ API Gateway running at http://localhost:${PORT}`);
   console.log(
     `🔧 Targets → 
@@ -88,6 +94,8 @@ app.listen(PORT, () => {
     CATALOGHOME: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"}
     FAVORITE: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"} ✅
     NEWS: ${process.env.NEWS_SERVICE_URL || "http://localhost:3008"}
-    ORDER: ${process.env.ORDER_SERVICE_URL || "http://localhost:3010"}`
+    ORDER: ${process.env.ORDER_SERVICE_URL || "http://localhost:3010"}
+    REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost4006"`
   );
 });
+
