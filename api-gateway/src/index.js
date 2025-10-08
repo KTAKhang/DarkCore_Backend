@@ -4,45 +4,51 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 
 import {
-    authProxy,
-    staffProxy,
-    catalogProxy,
-    cataloghomeProxy,
-    profileProxy,
-    repairProxy
+  authProxy,
+  staffProxy,
+  catalogProxy,
+  cataloghomeProxy,
+  profileProxy,
+  customerProxy,
+  cartProxy,
+  newsProxy,
+  orderProxy,
+  favoriteProxy, // ✅ Thêm import
+  repairProxy
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
-import { catalogAuth } from "../middleware/catalogAuth.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ===== CORS CONFIG - FIX CHO CREDENTIALS =====
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 app.use(
-    cors({
-        origin: FRONTEND_URL, // ✅ Dùng URL cụ thể thay vì wildcard
-        credentials: true, // ✅ Cho phép gửi cookie/credentials
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allowedHeaders: [
-            "Origin",
-            "X-Requested-With",
-            "Content-Type",
-            "Accept",
-            "Authorization",
-        ],
-    })
+
+  cors({
+    origin: FRONTEND_URL,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Origin",
+      "X-Requested-With",
+      "Content-Type",
+      "Accept",
+      "Authorization",
+    ],
+  })
 );
 
-// Xử lý preflight OPTIONS cho tất cả routes
-app.options("*", cors({
+app.options(
+  "*",
+  cors({
     origin: FRONTEND_URL,
-    credentials: true
-}));
+    credentials: true,
+  })
+);
 
 app.use(morgan("dev"));
 
@@ -50,29 +56,46 @@ app.use(morgan("dev"));
 app.use("/auth", authProxy);
 app.use("/cataloghome", cataloghomeProxy);
 
-// Catalog service - optional authentication (public + authenticated)
-app.use("/catalog", catalogAuth, catalogProxy);
+// ✅ Favorite routes (require JWT) - ĐẶT TRƯỚC để match specific route
+app.use("/api/favorites", gatewayAuth, favoriteProxy);
+
+// Catalog service - optional authentication
+app.use("/catalog", gatewayAuth, catalogProxy);
 
 // Staff service (require JWT)
 app.use("/staff", gatewayAuth, staffProxy);
 
+app.use("/cart", gatewayAuth, cartProxy);
 
 app.use("/profile", gatewayAuth, profileProxy);
+app.use("/customer", gatewayAuth, customerProxy);
+
 
 // Repair service (require JWT for all routes; can relax per need)
 app.use("/repair", gatewayAuth, repairProxy);
+// Order service (require JWT)
+app.use("/order", gatewayAuth, orderProxy);
 
-// Catalog service (require JWT)
-app.use("/catalog", gatewayAuth, catalogProxy);
+// News service (require JWT)
+app.use("/news", gatewayAuth, newsProxy);
 
-// Root endpoint
 app.get("/", (req, res) => {
-    res.send("🚀 API Gateway is running");
+  res.send("🚀 API Gateway is running");
 });
 
 app.listen(PORT, () => {
-    console.log(`✅ API Gateway running at http://localhost:${PORT}`);
 
-    console.log(`🔧 Targets → AUTH: ${process.env.AUTH_SERVICE_URL || 'http://localhost:3001'}, STAFF: ${process.env.STAFF_SERVICE_URL || 'http://localhost:3003'}, CATALOG: ${process.env.CATALOG_SERVICE_URL || 'http://localhost:3004'}, REPAIR: ${process.env.REPAIR_SERVICE_URL || 'http://localhost:4006'}`);
-}); // ✅ FIX: Thêm dấu đóng ngoặc
+  console.log(`✅ API Gateway running at http://localhost:${PORT}`);
+  console.log(
+    `🔧 Targets → 
+    AUTH: ${process.env.AUTH_SERVICE_URL || "http://localhost:3001"}
+    STAFF: ${process.env.STAFF_SERVICE_URL || "http://localhost:3003"}
+    CATALOG: ${process.env.CATALOG_SERVICE_URL || "http://localhost:3002"}
+    CATALOGHOME: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"}
+    FAVORITE: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"} ✅
+    NEWS: ${process.env.NEWS_SERVICE_URL || "http://localhost:3008"}
+    ORDER: ${process.env.ORDER_SERVICE_URL || "http://localhost:3010"}
+    REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost4006"`
+  );
+});
 

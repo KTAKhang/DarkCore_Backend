@@ -1,71 +1,144 @@
+const mongoose = require("mongoose");
 const CartService = require("../services/CartService");
+const Product = require("../models/Product");
+const User = require("../models/UserModel");
 
-// CartController
-exports.getCart = async (req, res) => {
-  try {
-    const userId = req.user._id || req.user.id;
-    if (!userId) {
-      return res.status(401).json({ message: "Invalid token payload", status: "ERR" });
-    }
+// ======================
+// Helper validate userId
+// ======================
+const _validateUser = async (userId) => {
+  if (!mongoose.isValidObjectId(userId)) {
+    throw new Error("Invalid userId");
+  }
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new Error("User not found");
+  }
+  return user;
+};
 
-    const cart = await CartService.getCart(userId);
-    res.json(cart);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+// ======================
+// Helper validate productId & quantity
+// ======================
+const _validateProductInput = (productId, quantity) => {
+  if (
+    !productId ||
+    !quantity ||
+    quantity < 1 ||
+    !mongoose.isValidObjectId(productId)
+  ) {
+    throw new Error("Valid productId and quantity (>=1) are required");
   }
 };
 
-exports.addItem = async (req, res) => {
+// ======================
+// Helper get product & validate stock
+// ======================
+const _getProduct = async (productId, quantity) => {
+  const product = await Product.findById(productId);
+  if (!product || !product.name || !product.price || !product.stockQuantity) {
+    throw new Error("Product not found or invalid");
+  }
+  if (quantity > product.stockQuantity) {
+    throw new Error(`Sản phẩm chỉ còn ${product.stockQuantity} trong kho`);
+  }
+  return product;
+};
+
+// ======================
+// Controller functions
+// ======================
+const getCart = async (req, res) => {
   try {
+    await _validateUser(req.user._id);
+
+    const result = await CartService.getCart(req.user._id);
+    res.status(result.status === "OK" ? 200 : 404).json(result);
+  } catch (err) {
+    res.status(400).json({ status: "ERR", message: err.message });
+  }
+};
+
+const addItem = async (req, res) => {
+  try {
+    await _validateUser(req.user._id);
+
     const { productId, quantity } = req.body;
-    const userId = req.user._id || req.user.id;
 
-    if (!userId) {
-      return res.status(401).json({ message: "User not found in token", status: "ERR" });
-    }
+    _validateProductInput(productId, quantity);
+    const product = await _getProduct(productId, quantity);
 
-    if (!productId || !quantity) {
-      return res.status(400).json({ message: "productId and quantity are required" });
-    }
+    const result = await CartService.addItem(
+      req.user._id,
+      productId,
+      product.name,
+      product.price,
+      quantity,
+      product.images?.[0] || null
+    );
 
-    const cart = await CartService.addItem(userId, productId, quantity);
-    res.json(cart);
+    res.status(result.status === "OK" ? 201 : 400).json(result);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(400).json({ status: "ERR", message: err.message });
   }
 };
 
-exports.updateItem = async (req, res) => {
+const updateItem = async (req, res) => {
   try {
-    const { itemId } = req.params;
+    await _validateUser(req.user._id);
+
+    const { productId } = req.params;
     const { quantity } = req.body;
-    const userId = req.user._id || req.user.id;
 
-    const cart = await CartService.updateItem(userId, itemId, quantity);
-    res.json(cart);
+    _validateProductInput(productId, quantity);
+    await _getProduct(productId, quantity);
+
+    const result = await CartService.updateItem(
+      req.user._id,
+      productId,
+      quantity
+    );
+    res.status(result.status === "OK" ? 200 : 400).json(result);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(400).json({ status: "ERR", message: err.message });
   }
 };
 
-exports.removeItem = async (req, res) => {
+const removeItem = async (req, res) => {
   try {
-    const { itemId } = req.params;
-    const userId = req.user._id || req.user.id;
+    await _validateUser(req.user._id);
 
-    const cart = await CartService.removeItem(userId, itemId);
-    res.json(cart);
+    const { productId } = req.params;
+
+    if (!productId || !mongoose.isValidObjectId(productId)) {
+      throw new Error("Valid productId is required");
+    }
+
+    const result = await CartService.removeItem(req.user._id, productId);
+    res.status(result.status === "OK" ? 200 : 400).json(result);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(400).json({ status: "ERR", message: err.message });
   }
 };
 
-exports.clearCart = async (req, res) => {
+const clearCart = async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
-    const cart = await CartService.clearCart(userId);
-    res.json(cart);
+    await _validateUser(req.user._id);
+
+    const result = await CartService.clearCart(req.user._id);
+    res.status(result.status === "OK" ? 200 : 400).json(result);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(400).json({ status: "ERR", message: err.message });
   }
+};
+
+// ======================
+// Export CommonJS
+// ======================
+module.exports = {
+  getCart,
+  addItem,
+  updateItem,
+  removeItem,
+  clearCart,
 };

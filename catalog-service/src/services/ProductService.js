@@ -18,12 +18,51 @@ const createProduct = async (payload) => {
         if (!categoryDoc) return { status: "ERR", message: "Không tìm thấy danh mục hoặc danh mục đang bị ẩn" };
         payload.category = categoryDoc._id;
 
-        // Chuẩn hoá images từ upload middleware (nếu chỉ có 1 ảnh chuyển thành mảng)
-        if (typeof payload.images === "string") {
-            payload.images = [payload.images];
+        // ✅ FIX: Xử lý images từ upload middleware hoặc frontend
+        if (payload.images) {
+            if (typeof payload.images === "string") {
+                // Kiểm tra nếu là JSON string
+                try {
+                    const parsed = JSON.parse(payload.images);
+                    payload.images = parsed; // Giữ nguyên parsed data
+                } catch (e) {
+                    // Không phải JSON, là URL string thông thường
+                    payload.images = [payload.images];
+                }
+            }
+            
+            // ✅ Xử lý trường hợp object với uid (không có URL thực tế)
+            if (Array.isArray(payload.images)) {
+                const processedImages = payload.images.map(img => {
+                    if (typeof img === "string") {
+                        return img; // URL string từ Cloudinary
+                    } else if (typeof img === "object" && img.url) {
+                        return img.url; // Object có URL
+                    } else if (typeof img === "object" && img.uid) {
+                        // Object chỉ có uid - tạo placeholder URL hoặc bỏ qua
+                        return `placeholder-${img.uid}`; // Placeholder URL
+                    }
+                    return null;
+                }).filter(img => img !== null);
+                
+                payload.images = processedImages;
+            }
         }
-        if (typeof payload.imagePublicIds === "string") {
-            payload.imagePublicIds = [payload.imagePublicIds];
+        
+        if (payload.imagePublicIds) {
+            if (typeof payload.imagePublicIds === "string") {
+                payload.imagePublicIds = [payload.imagePublicIds];
+            } else if (Array.isArray(payload.imagePublicIds)) {
+                // Xử lý array of objects từ frontend
+                payload.imagePublicIds = payload.imagePublicIds.map(id => {
+                    if (typeof id === "string") {
+                        return id;
+                    } else if (typeof id === "object" && id.publicId) {
+                        return id.publicId;
+                    }
+                    return null;
+                }).filter(id => id !== null);
+            }
         }
         // Fallback alias từ form cũ
         if (payload.short_desc === undefined) {
@@ -38,7 +77,9 @@ const createProduct = async (payload) => {
         }
 
         const product = await ProductModel.create(payload);
-        return { status: "OK", message: "Sản phẩm đã được tạo thành công", data: product };
+        // ✅ FIX: Populate category để trả về đầy đủ thông tin category như API getProducts
+        const populatedProduct = await ProductModel.findById(product._id).populate("category", "name status");
+        return { status: "OK", message: "Sản phẩm đã được tạo thành công", data: populatedProduct };
     } catch (error) {
         return { status: "ERR", message: error.message };
     }
@@ -46,7 +87,10 @@ const createProduct = async (payload) => {
 
 const getProducts = async (query = {}) => {
     try {
-        const { page = 1, limit = 5 } = query;
+        // Validation và chuẩn hóa page, limit
+        let page = Math.max(1, parseInt(query.page) || 1);
+        let limit = Math.min(Math.max(1, parseInt(query.limit) || 5), 100); // Tối đa 100 items/trang
+        
         const filter = {};
         const keyword = (query.keyword ?? query.name ?? "").toString().trim();
         if (keyword) {
@@ -65,22 +109,55 @@ const getProducts = async (query = {}) => {
             } else {
                 // Không có category phù hợp => trả danh sách rỗng
                 const empty = [];
-                return { status: "OK", data: empty, pagination: { page: Number(page), limit: Number(limit), total: 0 } };
+                return { 
+                    status: "OK", 
+                    data: empty, 
+                    pagination: { 
+                        page, 
+                        limit, 
+                        total: 0, 
+                        totalPages: 0,
+                        hasNextPage: false,
+                        hasPrevPage: false
+                    } 
+                };
             }
         }
 
         // Xử lý sort theo giá sản phẩm và ngày tạo
-        let sortOption = { createdAt: -1 }; // Mặc định sort theo thời gian tạo mới nhất
+        let sortOption = {}; // ✅ Mặc định KHÔNG sort gì cả
         const sortBy = (query.sortBy ?? "").toString().trim().toLowerCase();
-        const sortOrder = (query.sortOrder ?? "desc").toString().trim().toLowerCase();
+        const sortOrder = (query.sortOrder ?? "").toString().trim().toLowerCase();
         
-        if (sortBy === "price") {
-            sortOption = { price: sortOrder === "desc" ? -1 : 1 };
-        } else if (sortBy === "createdat" || sortBy === "created") {
-            sortOption = { createdAt: sortOrder === "asc" ? 1 : -1 };
+        // ✅ Validation sortBy và sortOrder - Hỗ trợ trạng thái "mặc định"
+        const validSortFields = ["price", "createdat", "created", "name", "default", "none"];
+        const validSortOrders = ["asc", "desc"];
+        
+        // ✅ FIX: Logic validation cải thiện - chỉ cần sortBy hợp lệ, sortOrder có thể mặc định
+        const isValidSortBy = validSortFields.includes(sortBy);
+        const isValidSortOrder = validSortOrders.includes(sortOrder);
+        
+        // ✅ FIX: Xử lý sort logic với trạng thái mặc định
+        if (sortBy === "default" || sortBy === "none" || sortBy === "" || !sortBy || !isValidSortBy) {
+            // Trạng thái mặc định - KHÔNG sort gì cả
+            sortOption = {};
         } else {
-            // Nếu không có sortBy hoặc sortBy không hợp lệ, dùng mặc định
-            sortOption = { createdAt: -1 };
+            // Có sortBy hợp lệ, xử lý sort
+            let actualSortOrder = "asc"; // Mặc định asc nếu sortOrder không hợp lệ
+            if (isValidSortOrder) {
+                actualSortOrder = sortOrder;
+            }
+            
+            if (sortBy === "price") {
+                sortOption = { price: actualSortOrder === "desc" ? -1 : 1 };
+            } else if (sortBy === "createdat" || sortBy === "created") {
+                sortOption = { createdAt: actualSortOrder === "desc" ? -1 : 1 };
+            } else if (sortBy === "name") {
+                sortOption = { name: actualSortOrder === "desc" ? -1 : 1 };
+            } else {
+                // Fallback - không sort
+                sortOption = {};
+            }
         }
 
         // ✅ FIX: Populate đầy đủ category data bao gồm status
@@ -88,7 +165,7 @@ const getProducts = async (query = {}) => {
             .populate("category", "name status") // Thêm status vào populate
             .sort(sortOption)
             .skip((page - 1) * limit)
-            .limit(Number(limit));
+            .limit(limit);
         const total = await ProductModel.countDocuments(filter);
         
         const data = products.map((p) => {
@@ -97,7 +174,23 @@ const getProducts = async (query = {}) => {
             obj.warrantyDetails = obj.detail_desc;
             return obj;
         });
-        return { status: "OK", data, pagination: { page: Number(page), limit: Number(limit), total } };
+        
+        const totalPages = Math.ceil(total / limit);
+        const hasNextPage = page < totalPages;
+        const hasPrevPage = page > 1;
+        
+        return { 
+            status: "OK", 
+            data, 
+            pagination: { 
+                page, 
+                limit, 
+                total, 
+                totalPages,
+                hasNextPage,
+                hasPrevPage
+            } 
+        };
     } catch (error) {
         return { status: "ERR", message: error.message };
     }
@@ -131,12 +224,51 @@ const updateProduct = async (id, payload) => {
                 payload.category = cat._id;
             }
         }
-        // Chuẩn hoá images từ upload middleware (nếu chỉ có 1 ảnh chuyển thành mảng)
-        if (typeof payload.images === "string") {
-            payload.images = [payload.images];
+        // ✅ FIX: Xử lý images từ upload middleware hoặc frontend
+        if (payload.images) {
+            if (typeof payload.images === "string") {
+                // Kiểm tra nếu là JSON string
+                try {
+                    const parsed = JSON.parse(payload.images);
+                    payload.images = parsed; // Giữ nguyên parsed data
+                } catch (e) {
+                    // Không phải JSON, là URL string thông thường
+                    payload.images = [payload.images];
+                }
+            }
+            
+            // ✅ Xử lý trường hợp object với uid (không có URL thực tế)
+            if (Array.isArray(payload.images)) {
+                const processedImages = payload.images.map(img => {
+                    if (typeof img === "string") {
+                        return img; // URL string từ Cloudinary
+                    } else if (typeof img === "object" && img.url) {
+                        return img.url; // Object có URL
+                    } else if (typeof img === "object" && img.uid) {
+                        // Object chỉ có uid - tạo placeholder URL hoặc bỏ qua
+                        return `placeholder-${img.uid}`; // Placeholder URL
+                    }
+                    return null;
+                }).filter(img => img !== null);
+                
+                payload.images = processedImages;
+            }
         }
-        if (typeof payload.imagePublicIds === "string") {
-            payload.imagePublicIds = [payload.imagePublicIds];
+        
+        if (payload.imagePublicIds) {
+            if (typeof payload.imagePublicIds === "string") {
+                payload.imagePublicIds = [payload.imagePublicIds];
+            } else if (Array.isArray(payload.imagePublicIds)) {
+                // Xử lý array of objects từ frontend
+                payload.imagePublicIds = payload.imagePublicIds.map(id => {
+                    if (typeof id === "string") {
+                        return id;
+                    } else if (typeof id === "object" && id.publicId) {
+                        return id.publicId;
+                    }
+                    return null;
+                }).filter(id => id !== null);
+            }
         }
         // Fallback alias từ form cũ
         if (payload.short_desc === undefined) {
@@ -168,7 +300,9 @@ const updateProduct = async (id, payload) => {
 
         const updated = await ProductModel.findByIdAndUpdate(id, payload, { new: true });
         if (!updated) return { status: "ERR", message: "Không tìm thấy sản phẩm" };
-        return { status: "OK", message: "Sản phẩm đã được cập nhật thành công", data: updated };
+        // ✅ FIX: Populate category để trả về đầy đủ thông tin category như API getProducts
+        const populatedUpdated = await ProductModel.findById(updated._id).populate("category", "name status");
+        return { status: "OK", message: "Sản phẩm đã được cập nhật thành công", data: populatedUpdated };
     } catch (error) {
         return { status: "ERR", message: error.message };
     }

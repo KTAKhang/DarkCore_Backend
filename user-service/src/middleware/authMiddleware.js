@@ -1,15 +1,31 @@
 const UserModel = require("../models/UserModel");
 
 
-
 // Middleware lấy user từ header do Gateway gửi sang
-const attachUserFromHeader = (req, res, next) => {
+const attachUserFromHeader = async (req, res, next) => {
     try {
         if (req.headers["x-user"]) {
-            req.user = JSON.parse(req.headers["x-user"]);
+            const userFromHeader = JSON.parse(req.headers["x-user"]);
+
+            // Luôn lấy user từ DB để đảm bảo thông tin mới nhất
+            const user = await UserModel.findById(userFromHeader._id);
+
+            if (!user) {
+                return res.status(401).json({ message: "User not found", status: "ERR" });
+            }
+
+            // Check status: false = bị block
+            if (user.status === false) {
+                return res.status(403).json({ message: "Tài khoản của bạn đã bị khóa bởi admin", status: "ERR" });
+            }
+
+            // Nếu OK thì gắn user vào req
+            req.user = user;
         }
+
         next();
     } catch (err) {
+        console.error("attachUserFromHeader error:", err);
         return res.status(400).json({ message: "Invalid user header", status: "ERR" });
     }
 };
@@ -56,7 +72,6 @@ const authMiddleware = async (req, res, next) => {
 
 // Middleware chỉ cần user login (không phân biệt role)
 const authUserMiddleware = (req, res, next) => {
-    console.log("req.user", req?.user)
     if (!req.user) {
         return res.status(401).json({ message: "No user data", status: "ERR" });
     }
