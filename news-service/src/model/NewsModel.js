@@ -7,11 +7,6 @@ const newsSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    slug: {
-      type: String,
-      unique: true,
-      trim: true,
-    },
     excerpt: {
       type: String,
       trim: true,
@@ -42,18 +37,14 @@ const newsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    image: { type: String, default: "", trim: true }, // URL ảnh
+    imagePublicId: { type: String, default: "", trim: true }, // public_id Cloudinary
   },
   { timestamps: true }
 );
 
-// tạo slug tự động trước khi lưu
+// set publishedAt khi publish
 newsSchema.pre("save", function (next) {
-  if (!this.slug && this.title) {
-    this.slug = this.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)+/g, "");
-  }
   if (this.status === "published" && !this.publishedAt) {
     this.publishedAt = new Date();
   }

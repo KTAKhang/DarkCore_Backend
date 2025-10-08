@@ -72,10 +72,6 @@ CartSchema.virtual("items", {
 // Cấu hình toJSON/toObject để include virtuals
 CartSchema.set("toJSON", { virtuals: true });
 CartSchema.set("toObject", { virtuals: true });
-
-// Index cho query nhanh theo userId
-CartSchema.index({ userId: 1 });
-
 module.exports = {
   Cart: mongoose.model("Cart", CartSchema),
   CartItem: CartItem,
