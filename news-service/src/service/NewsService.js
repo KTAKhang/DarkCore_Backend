@@ -31,9 +31,10 @@ const createNews = async (data) => {
   }
 };
 
-// Lấy news theo ID (public: chỉ published)
+// Lấy news theo ID (public: chỉ published) - SỬA: Không increment ở service nữa, di chuyển logic lên controller
 const getNewsById = async (id) => {
   try {
+    // THÊM: Chỉ fetch published news (giữ nguyên logic public)
     return await News.findOne({ _id: id, status: "published" }).populate(
       "author.id",
       "name email"
@@ -155,10 +156,60 @@ const listNews = async ({
   }
 };
 
+// THÊM: Lấy thống kê tổng (count theo status, không filter)
+const getStats = async () => {
+  try {
+    const aggregationResult = await News.aggregate([
+      // Group theo status và count
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+      // Group lại để tính total và sum có điều kiện cho từng status
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$count" },
+          published: {
+            $sum: { $cond: [{ $eq: ["$_id", "published"] }, "$count", 0] },
+          },
+          draft: {
+            $sum: { $cond: [{ $eq: ["$_id", "draft"] }, "$count", 0] },
+          },
+          archived: {
+            $sum: { $cond: [{ $eq: ["$_id", "archived"] }, "$count", 0] },
+          },
+        },
+      },
+      // Project chỉ fields cần
+      {
+        $project: {
+          _id: 0,
+          total: 1,
+          published: 1,
+          draft: 1,
+          archived: 1,
+        },
+      },
+    ]);
+
+    // Fallback nếu không có data
+    return (
+      aggregationResult[0] || { total: 0, published: 0, draft: 0, archived: 0 }
+    );
+  } catch (err) {
+    console.error("GetStats service error:", err);
+    throw new Error("Không thể tải thống kê news");
+  }
+};
+
 module.exports = {
   createNews,
   getNewsById,
   updateNews,
   deleteNews,
   listNews,
+  getStats, // THÊM: Export method mới
 };

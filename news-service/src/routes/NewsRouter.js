@@ -12,7 +12,11 @@ router.use(attachUserFromHeader);
 
 // public endpoints
 router.get("/", newsController.listNews);
-router.get("/:id", newsController.getNewsById);
+
+// THÊM/SỬA: Di chuyển /stats lên trước /:id (specific trước catch-all)
+router.get("/stats", authRoleMiddleware(["admin"]), newsController.getStats);
+
+router.get("/:id", newsController.getNewsById); // Giữ nguyên, nhưng giờ sau /stats
 
 // protected endpoints (admin/editor)
 router.post(
