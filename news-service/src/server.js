@@ -15,13 +15,16 @@ app.use(express.json());
 // Kết nối MongoDB
 // Thay vì mongoose.connect(process.env.MONGO_URL); trực tiếp
 if (!process.env.MONGO_URL) {
-  console.error('❌ BUG: MONGO_URL is undefined! Check .env and dotenv.config()');
-  process.exit(1);  // Dừng server để tránh loop
+  console.error(
+    "❌ BUG: MONGO_URL is undefined! Check .env and dotenv.config()"
+  );
+  process.exit(1); // Dừng server để tránh loop
 }
-mongoose.connect(process.env.MONGO_URL)
-  .then(() => console.log('✅ MongoDB connected!'))
-  .catch(err => {
-    console.error('❌ MongoDB connection error:', err.message);
+mongoose
+  .connect(process.env.MONGO_URL)
+  .then(() => console.log("✅ MongoDB connected!"))
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err.message);
     process.exit(1);
   });
 
