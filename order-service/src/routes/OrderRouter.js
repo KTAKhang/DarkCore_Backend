@@ -12,6 +12,9 @@ router.get("/orders", OrderController.getOrders);
 // Lấy thống kê đơn hàng - PHẢI ĐỊNH NGHĨA TRƯỚC /orders/:id
 router.get("/orders/stats", OrderController.getOrderStats);
 
+// 🆕 Lấy lịch sử đơn hàng của khách hàng - PHẢI ĐỊNH NGHĨA TRƯỚC /orders/:id
+router.get("/orders/history/:userId", OrderController.getOrderHistory);
+
 // Lấy chi tiết đơn hàng theo ID - PHẢI ĐỊNH NGHĨA SAU các routes cụ thể
 router.get("/orders/:id", OrderController.getOrderById);
 

@@ -305,3 +305,4 @@ FAVORITES_SERVICE_URL=http://localhost:3001
 ---
 
 **✅ Sau khi fix API Gateway routing, mọi thứ sẽ hoạt động!**
+

@@ -435,3 +435,4 @@ Expected: Status **200**, không còn **ECONNREFUSED**
 ---
 
 **🎉 Sau khi fix, Favorites sẽ route về Cataloghome Service (port 3004) thay vì Order Service (port 3010)!**
+

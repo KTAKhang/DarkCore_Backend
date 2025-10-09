@@ -327,6 +327,122 @@ const getOrderStatuses = async () => {
     }
 };
 
+// 🆕 Lấy lịch sử đơn hàng của khách hàng
+const getOrderHistory = async (userId, query = {}) => {
+    try {
+        // Kiểm tra user tồn tại
+        const user = await UserModel.findById(userId);
+        if (!user) return { status: "ERR", message: "Không tìm thấy người dùng" };
+
+        // Validation và chuẩn hóa page, limit
+        let page = Math.max(1, parseInt(query.page) || 1);
+        let limit = Math.min(Math.max(1, parseInt(query.limit) || 10), 100); // Mặc định 10 items/trang
+        
+        const filter = { userId }; // Chỉ lấy đơn hàng của user này
+        
+        // Filter theo orderStatusId nếu có
+        if (query.orderStatusId) {
+            filter.orderStatusId = query.orderStatusId;
+        }
+        
+        // Filter theo status name nếu có
+        if (query.status) {
+            const status = await OrderStatusModel.findOne({ name: query.status, status: true, isActive: true });
+            if (status) {
+                filter.orderStatusId = status._id;
+            } else {
+                // Không có status phù hợp => trả danh sách rỗng
+                return { 
+                    status: "OK", 
+                    data: [], 
+                    pagination: { 
+                        page, 
+                        limit, 
+                        total: 0, 
+                        totalPages: 0,
+                        hasNextPage: false,
+                        hasPrevPage: false
+                    } 
+                };
+            }
+        }
+
+        // Filter theo khoảng thời gian nếu có
+        if (query.startDate || query.endDate) {
+            filter.createdAt = {};
+            if (query.startDate) {
+                filter.createdAt.$gte = new Date(query.startDate);
+            }
+            if (query.endDate) {
+                const endDate = new Date(query.endDate);
+                endDate.setHours(23, 59, 59, 999); // Set to end of day
+                filter.createdAt.$lte = endDate;
+            }
+        }
+
+        // Xử lý sort - mặc định mới nhất trên cùng
+        let sortOption = { createdAt: -1 };
+        const sortBy = (query.sortBy ?? "").toString().trim().toLowerCase();
+        const sortOrder = (query.sortOrder ?? "desc").toString().trim().toLowerCase();
+        
+        if (sortBy === "createdAt" || sortBy === "orderDate") {
+            sortOption = { createdAt: sortOrder === "asc" ? 1 : -1 };
+        } else if (sortBy === "totalPrice") {
+            sortOption = { totalPrice: sortOrder === "asc" ? 1 : -1 };
+        }
+
+        // Lấy orders với populate
+        const orders = await OrderModel.find(filter)
+            .populate("orderStatusId", "name description color")
+            .sort(sortOption)
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean();
+            
+        // Lấy order details cho mỗi order
+        const ordersWithDetails = await Promise.all(
+            orders.map(async (order) => {
+                const orderDetails = await OrderDetailModel.find({ orderId: order._id })
+                    .populate("productId", "name images price")
+                    .lean();
+                
+                // Convert ObjectId thành string
+                const processedOrderDetails = orderDetails.map(detail => ({
+                    ...detail,
+                    productId: detail.productId ? detail.productId._id.toString() : null,
+                    orderId: detail.orderId.toString(),
+                    _id: detail._id.toString()
+                }));
+                
+                order.orderDetails = processedOrderDetails;
+                return order;
+            })
+        );
+            
+        const total = await OrderModel.countDocuments(filter);
+        
+        const totalPages = Math.ceil(total / limit);
+        const hasNextPage = page < totalPages;
+        const hasPrevPage = page > 1;
+        
+        return { 
+            status: "OK", 
+            message: "Lấy lịch sử đơn hàng thành công",
+            data: ordersWithDetails, 
+            pagination: { 
+                page, 
+                limit, 
+                total, 
+                totalPages,
+                hasNextPage,
+                hasPrevPage
+            } 
+        };
+    } catch (error) {
+        return { status: "ERR", message: error.message };
+    }
+};
+
 module.exports = {
     createOrder,
     getOrders,
@@ -334,4 +450,5 @@ module.exports = {
     updateOrderStatus,
     getOrderStats,
     getOrderStatuses,
+    getOrderHistory,
 };

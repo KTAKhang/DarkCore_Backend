@@ -62,6 +62,18 @@ const getOrderStatuses = async (req, res) => {
     }
 };
 
+// 🆕 Lấy lịch sử đơn hàng của khách hàng
+const getOrderHistory = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const result = await OrderService.getOrderHistory(userId, req.query);
+        const statusCode = result.status === "OK" ? 200 : 400;
+        return res.status(statusCode).json(result);
+    } catch (error) {
+        return res.status(500).json({ status: "ERR", message: error.message });
+    }
+};
+
 module.exports = {
     createOrder,
     getOrders,
@@ -69,4 +81,5 @@ module.exports = {
     updateOrderStatus,
     getOrderStats,
     getOrderStatuses,
+    getOrderHistory,
 };
