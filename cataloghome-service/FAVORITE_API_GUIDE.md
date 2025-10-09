@@ -384,3 +384,4 @@ _Trả về array chứa các productId nằm trong danh sách yêu thích_
 ---
 
 **🎉 Hoàn thành! Mỗi user giờ đây có danh sách yêu thích riêng biệt!**
+
