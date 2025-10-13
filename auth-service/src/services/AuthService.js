@@ -34,12 +34,21 @@ const loginWithGoogle = async (idToken) => {
         });
         const payload = ticket.getPayload();
         const { sub: googleId, email, name, picture, exp } = payload;
+
         const now = Math.floor(Date.now() / 1000);
         if (exp < now) {
             throw { status: "ERR", message: "Mã thông báo ID Google đã hết hạn" };
         }
+
+
         let user = await UserModel.findOne({ $or: [{ googleId }, { email }] });
-        if (!user) {
+
+        if (user) {
+            if (!user.googleId) user.googleId = googleId;
+            if (!user.isGoogleAccount) user.isGoogleAccount = true;
+            if (picture && !user.avatar) user.avatar = picture;
+            await user.save();
+        } else {
             user = new UserModel({
                 user_name: name,
                 email,
@@ -50,11 +59,13 @@ const loginWithGoogle = async (idToken) => {
             });
             await user.save();
         }
+
         if (user.status === false) {
             throw { status: "ERR", message: "Tài khoản bị chặn" };
         }
         const populatedUser = await UserModel.findById(user._id).populate("role_id", "name -_id");
         const roleName = populatedUser?.role_id?.name || "customer";
+
         const accessToken = jwtService.generalAccessToken({
             _id: user._id,
             isAdmin: roleName === "admin",
@@ -65,8 +76,10 @@ const loginWithGoogle = async (idToken) => {
             isAdmin: roleName === "admin",
             role: roleName,
         });
+
         user.refreshToken = refreshToken;
         await user.save();
+
         return {
             status: "OK",
             message: "Đăng nhập Google thành công",
@@ -77,17 +90,20 @@ const loginWithGoogle = async (idToken) => {
                 avatar: populatedUser.avatar,
                 role_name: roleName,
                 status: populatedUser.status,
+                isGoogleAccount: populatedUser.isGoogleAccount ?? false,
                 createdAt: populatedUser.createdAt,
                 updatedAt: populatedUser.updatedAt,
             },
             token: {
-                access_token: accessToken, refresh_token: refreshToken
+                access_token: accessToken,
+                refresh_token: refreshToken,
             },
         };
     } catch (error) {
         throw error;
     }
 };
+
 const loginUser = async ({ email, password }) => {
     try {
         const user = await UserModel.findOne({
@@ -127,6 +143,7 @@ const loginUser = async ({ email, password }) => {
                 phone: populatedUser.phone,
                 address: populatedUser.address,
                 status: populatedUser.status,
+                isGoogleAccount: populatedUser.isGoogleAccount ?? false, // ✅ fallback về false nếu undefined/null
                 createdAt: populatedUser.createdAt,
                 updatedAt: populatedUser.updatedAt,
             },

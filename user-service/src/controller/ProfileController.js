@@ -22,46 +22,64 @@ const checkRole = async (userID) => {
 const updateProfile = async (req, res) => {
     try {
         const id = req.user._id;
-        const data = req.body;
+        const { user_name, phone, address } = req.body;
         const file = req.file;
 
-        if (!req.user || !req.user._id) {
-            return res.status(401).json({ status: "ERR", message: "Unauthorized" });
+        // Validate user_name
+        const isStrictUserName = (name) => /^[\p{L}\p{N}_ ]{3,30}$/u.test(name);
+        if (!isStrictUserName(user_name)) {
+            return res.status(400).json({
+                status: "ERR",
+                message: "Tên người dùng phải từ 3–30 ký tự, chỉ gồm chữ cái, số, khoảng trắng hoặc dấu gạch dưới",
+            });
         }
 
-        const userID = req.user._id;
-        const roleResult = await checkRole(userID);
-
-        if (roleResult.status === "ERR") {
-            return res.status(404).json({ status: "ERR", message: roleResult.message });
+        // Validate phone
+        const isStrictPhone = (phone) => /^0\d{8,10}$/.test(phone);
+        if (!isStrictPhone(phone)) {
+            return res.status(400).json({
+                status: "ERR",
+                message: "Số điện thoại không hợp lệ (phải bắt đầu bằng 0 và có 9–11 chữ số)",
+            });
         }
 
-        if (roleResult.role !== "admin" && userID !== id) {
-            return res.status(403).json({ status: "ERR", message: "You are not authorized" });
+        // Validate address
+        const isStrictAddress = (addr) => /^[\p{L}\p{N}\s,.\-\/]{5,100}$/u.test(addr);
+        if (!isStrictAddress(address)) {
+            return res.status(400).json({
+                status: "ERR",
+                message: "Địa chỉ phải từ 5–100 ký tự, chỉ chứa chữ, số, khoảng trắng và các ký tự , . - /",
+            });
         }
 
-        if (!id) {
-            return res.status(400).json({ status: "ERR", message: "User ID is required" });
-        }
-
-
+        // Validate file upload
         if (file) {
-            const maxSize = 3 * 1024 * 1024;
+            const maxSize = 3 * 1024 * 1024; // 3MB
             if (file.size > maxSize) {
-                return res.status(400).json({ status: "ERR", message: "File size must be under 3MB" });
+                return res.status(400).json({
+                    status: "ERR",
+                    message: "File size must be under 3MB",
+                });
             }
             const allowedTypes = ["image/jpeg", "image/png"];
             if (!allowedTypes.includes(file.mimetype)) {
-                return res.status(400).json({ status: "ERR", message: "Only JPG, PNG images are allowed" });
+                return res.status(400).json({
+                    status: "ERR",
+                    message: "Only JPG, PNG images are allowed",
+                });
             }
         }
 
-        const response = await ProfileService.updateProfile(id, data, file, roleResult.role);
+        const response = await ProfileService.updateProfile(id, { user_name, phone, address }, file);
         return res.status(200).json(response);
 
     } catch (error) {
         console.error("Update user error:", error);
-        return res.status(500).json({ status: "ERR", message: "Server error", detail: error.message });
+        return res.status(500).json({
+            status: "ERR",
+            message: "Server error",
+            detail: error.message,
+        });
     }
 };
 
@@ -112,7 +130,7 @@ const changePassword = async (req, res) => {
         }
 
         const isStrictPassword = (password) => {
-            const regex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+            const regex = /^(?=.*[A-Z])(?=.*\d).{8,8}$/;
             return regex.test(password);
         };
 
@@ -120,7 +138,7 @@ const changePassword = async (req, res) => {
             return res.status(400).json({
                 status: "ERR",
                 message:
-                    "Mật khẩu phải chứa ít nhất 8 ký tự, bao gồm chữ hoa và số",
+                    "Mật khẩu phải chứa 8 ký tự, bao gồm chữ hoa và số",
             });
         }
 
