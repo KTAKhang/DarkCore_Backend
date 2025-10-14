@@ -121,17 +121,45 @@ const listNews = async ({
 }) => {
   try {
     const filter = { ...(status && { status }) };
-    if (q) filter.$text = { $search: q };
+
+    // 🔹 Search query q: text search + tag regex
+    if (q && typeof q === "string" && q.trim() !== "") {
+      const qTrim = q.trim();
+
+      // Tách $text và $regex để tránh lỗi MongoDB
+      const textSearch = { $text: { $search: qTrim } }; // yêu cầu text index
+      const tagSearch = { tags: { $regex: qTrim, $options: "i" } };
+
+      // Kiểm tra text index tồn tại, nếu không chỉ search tags
+      const indexes = await News.listIndexes();
+      const hasTextIndex = indexes.some((idx) =>
+        Object.values(idx.key).includes("text")
+      );
+
+      if (hasTextIndex) {
+        filter.$or = [textSearch, tagSearch];
+      } else {
+        filter.tags = tagSearch.tags;
+      }
+    }
+
+    // 🔹 Filter theo author name
     if (author) filter["author.name"] = new RegExp(author, "i");
+
+    // 🔹 Filter theo tags cụ thể
     if (tags) filter.tags = { $in: tags.split(",").map((t) => t.trim()) };
 
+    // 🔹 Sort
     const sort = {};
     sort[sortBy] = order === "asc" ? 1 : -1;
 
+    // 🔹 Pagination
     const skip = (Math.max(1, page) - 1) * Math.max(1, limit);
 
+    // 🔹 Query data
     let data = await News.find(filter).sort(sort).skip(skip).limit(limit);
 
+    // 🔹 Populate author info
     try {
       data = await News.populate(data, {
         path: "author.id",
@@ -142,6 +170,7 @@ const listNews = async ({
       console.warn("Populate author failed:", populateErr.message);
     }
 
+    // 🔹 Count total
     const total = await News.countDocuments(filter);
 
     return {
@@ -155,6 +184,7 @@ const listNews = async ({
     throw err;
   }
 };
+
 
 // THÊM: Lấy thống kê tổng (count theo status, không filter)
 const getStats = async () => {
