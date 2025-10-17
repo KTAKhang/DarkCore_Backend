@@ -87,8 +87,8 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
 
   console.log(`✅ API Gateway running at http://localhost:${PORT}`);
-  console.log(
-    `🔧 Targets → 
+  console.log(`
+    🔧 Targets → 
     AUTH: ${process.env.AUTH_SERVICE_URL || "http://localhost:3001"}
     STAFF: ${process.env.STAFF_SERVICE_URL || "http://localhost:3003"}
     CATALOG: ${process.env.CATALOG_SERVICE_URL || "http://localhost:3002"}
@@ -96,7 +96,7 @@ app.listen(PORT, () => {
     FAVORITE: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"} ✅
     NEWS: ${process.env.NEWS_SERVICE_URL || "http://localhost:3008"}
     ORDER: ${process.env.ORDER_SERVICE_URL || "http://localhost:3010"}
-    REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost4006"}`
+    REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost:4006"}`
   );
 });
-
+  
