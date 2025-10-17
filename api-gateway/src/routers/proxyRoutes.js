@@ -51,6 +51,11 @@ export const customerProxy = createProxyMiddleware("/customer", {
   changeOrigin: true,
   pathRewrite: { "^/customer": "" },
 });
+export const productReviewProxy = createProxyMiddleware("/review", {
+  target: process.env.USER_SERVICE_URL || "http://localhost:3030",
+  changeOrigin: true,
+  pathRewrite: { "^/review": "" },
+});
 
 // Catalog Home Service
 export const cataloghomeProxy = createProxyMiddleware("/cataloghome", {
@@ -116,9 +121,9 @@ export const favoriteProxy = createProxyMiddleware("/api/favorites", {
 
 // Repair Service
 export const repairProxy = createProxyMiddleware("/repair", {
-    target: process.env.REPAIR_SERVICE_URL || "http://localhost:4006",
-    changeOrigin: true,
-    pathRewrite: { "^/repair": "" },
+  target: process.env.REPAIR_SERVICE_URL || "http://localhost:4006",
+  changeOrigin: true,
+  pathRewrite: { "^/repair": "" },
 });
 
 export default router;

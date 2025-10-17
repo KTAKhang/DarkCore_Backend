@@ -13,8 +13,9 @@ import {
   cartProxy,
   newsProxy,
   orderProxy,
-  favoriteProxy, // ✅ Thêm import
-  repairProxy
+  favoriteProxy,
+  repairProxy,
+  productReviewProxy
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -69,7 +70,7 @@ app.use("/cart", gatewayAuth, cartProxy);
 
 app.use("/profile", gatewayAuth, profileProxy);
 app.use("/customer", gatewayAuth, customerProxy);
-
+app.use("/review", gatewayAuth, productReviewProxy);
 
 // Repair service (require JWT for all routes; can relax per need)
 app.use("/repair", gatewayAuth, repairProxy);
@@ -95,7 +96,7 @@ app.listen(PORT, () => {
     FAVORITE: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"} ✅
     NEWS: ${process.env.NEWS_SERVICE_URL || "http://localhost:3008"}
     ORDER: ${process.env.ORDER_SERVICE_URL || "http://localhost:3010"}
-    REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost4006"`
+    REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost4006"}`
   );
 });
 
