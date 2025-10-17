@@ -5,12 +5,12 @@ const multer = require("multer");
 const upload = multer({ storage: multer.memoryStorage() });
 const {
     authAdminMiddleware,
-    attachUserFromHeader
+    attachUserFromHeader,
 } = require("../middleware/authMiddleware");
 
 routerCustomer.use(attachUserFromHeader);
 
-routerCustomer.put("/:id/status", customerController.updateUserStatus);
+routerCustomer.put("/:id/status", authAdminMiddleware, customerController.updateUserStatus);
 
 routerCustomer.get("/get-all", authAdminMiddleware, customerController.getAllUser);
 
