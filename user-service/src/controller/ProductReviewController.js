@@ -276,16 +276,12 @@ const updateReviewStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
-
-        // Kiểm tra dữ liệu
         if (status === undefined) {
             return res.status(400).json({
                 success: false,
                 message: "Thiếu giá trị status trong request body"
             });
         }
-
-        // Chuyển đổi sang boolean
         const parsedStatus = (status === true || status === "true");
 
         const updatedReview = await ProductReviewService.updateReviewStatus(id, parsedStatus);
