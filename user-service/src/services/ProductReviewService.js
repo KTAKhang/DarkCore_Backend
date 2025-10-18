@@ -394,6 +394,7 @@ async function getProductReviewByOrderId(order_id) {
                     content: review.review_content,
                     status: review.status,
                     createdAt: review.createdAt,
+                    updatedAt: review.updatedAt,
                 }
                 : null, // ❗ Không có review thì để null
         };

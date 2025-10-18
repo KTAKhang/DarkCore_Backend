@@ -6,13 +6,8 @@ const { attachUserFromHeader, authAdminMiddleware, authCustomerMiddleware, authU
 routerReview.use(attachUserFromHeader);
 routerReview.post("/create", authCustomerMiddleware, productReviewController.createReview);
 routerReview.put("/update/:id", authCustomerMiddleware, productReviewController.updateReview);
-
 routerReview.get("/user", authCustomerMiddleware, productReviewController.getProductReviewsByUserId);
-
-
 routerReview.get("/product/:product_id", productReviewController.getProductReviews);
-
-
 routerReview.get("/admin/viewlist", authAdminMiddleware, productReviewController.getAllReviewsForAdmin);
 routerReview.get("/detail/:id", authAdminMiddleware, productReviewController.getReviewDetail);
 routerReview.put("/hidden/:id", authAdminMiddleware, productReviewController.updateReviewStatus);
