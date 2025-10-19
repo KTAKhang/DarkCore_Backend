@@ -70,7 +70,11 @@ export const newsProxy = createProxyMiddleware("/news", {
   changeOrigin: true,
   pathRewrite: { "^/news": "" },
 });
-
+export const contactProxy = createProxyMiddleware("/contacts", {
+  target: process.env.CONTACT_SERVICE_URL || "http://localhost:3009",
+  changeOrigin: true,
+  pathRewrite: { "^/contacts": "/contacts" },
+});
 // Order Service Proxy
 export const orderProxy = createProxyMiddleware("/order", {
   target: process.env.ORDER_SERVICE_URL || "http://localhost:3010",

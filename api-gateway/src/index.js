@@ -14,7 +14,8 @@ import {
   newsProxy,
   orderProxy,
   favoriteProxy, // ✅ Thêm import
-  repairProxy
+  repairProxy,
+  contactProxy,
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -31,7 +32,7 @@ app.use(
   cors({
     origin: FRONTEND_URL,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: [
       "Origin",
       "X-Requested-With",
@@ -69,7 +70,7 @@ app.use("/cart", gatewayAuth, cartProxy);
 
 app.use("/profile", gatewayAuth, profileProxy);
 app.use("/customer", gatewayAuth, customerProxy);
-
+app.use("/contacts", gatewayAuth, contactProxy);
 
 // Repair service (require JWT for all routes; can relax per need)
 app.use("/repair", gatewayAuth, repairProxy);
@@ -92,10 +93,11 @@ app.listen(PORT, () => {
     STAFF: ${process.env.STAFF_SERVICE_URL || "http://localhost:3003"}
     CATALOG: ${process.env.CATALOG_SERVICE_URL || "http://localhost:3002"}
     CATALOGHOME: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"}
-    FAVORITE: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"} ✅
+    FAVORITE: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"} 
     NEWS: ${process.env.NEWS_SERVICE_URL || "http://localhost:3008"}
     ORDER: ${process.env.ORDER_SERVICE_URL || "http://localhost:3010"}
-    REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost:4006"}`
+    REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost:4006"}
+    CONTACT: ${process.env.CONTACT_SERVICE_URL || "http://localhost:3009"}`
   );
 });
   
