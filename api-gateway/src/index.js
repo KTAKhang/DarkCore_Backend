@@ -16,6 +16,8 @@ import {
   discountProxy,
   favoriteProxy,
   repairProxy
+  productReviewProxy
+
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -50,27 +52,30 @@ app.options(
 );
 
 app.use(morgan("dev"));
-
 // --- Public routes ---
 app.use("/auth", authProxy);
 app.use("/cataloghome", cataloghomeProxy);
-
 // --- Protected routes ---
 app.use("/api/favorites", gatewayAuth, favoriteProxy);
+// Catalog service (require JWT)
 app.use("/catalog", gatewayAuth, catalogProxy);
 app.use("/staff", gatewayAuth, staffProxy);
 app.use("/cart", gatewayAuth, cartProxy);
 app.use("/profile", gatewayAuth, profileProxy);
 app.use("/customer", gatewayAuth, customerProxy);
 app.use("/repair", gatewayAuth, repairProxy);
+app.use("/review", gatewayAuth, productReviewProxy);
+// Order service (require JWT)
 app.use("/order", gatewayAuth, orderProxy);
 app.use("/discount", gatewayAuth, discountProxy);
 app.use("/news", gatewayAuth, newsProxy);
 
+// Health check
 app.get("/", (req, res) => {
   res.send("🚀 API Gateway is running");
 });
 
+// ✅ Fixed syntax: closed string, braces, parentheses
 app.listen(PORT, () => {
   console.log(`✅ API Gateway running at http://localhost:${PORT}`);
   console.log(`🔧 Targets →
@@ -83,5 +88,8 @@ app.listen(PORT, () => {
     ORDER: ${process.env.ORDER_SERVICE_URL || "http://localhost:3010"}
     DISCOUNT: ${process.env.DISCOUNT_SERVICE_URL || "http://localhost:5005"}
     REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost:4006"}
+    CART: ${process.env.CART_SERVICE_URL || "http://localhost:3005"}
+    PAYMENT: ${process.env.PAYMENT_SERVICE_URL || "http://localhost:3007"}
   `);
 });
+

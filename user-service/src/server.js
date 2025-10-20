@@ -6,6 +6,8 @@ const routes = require("./routes");
 const swaggerDocs = require("./swagger");
 const cookieParser = require("cookie-parser");
 
+require("./models");
+
 dotenv.config();
 
 const app = express();
