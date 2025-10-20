@@ -1,18 +1,25 @@
 const express = require("express");
-const { createPayment, vnpayCallback, refundPayment, getFailedPayments } = require("../controller/vnpayController");
-const { authMiddleware } = require("../middleware/authMiddleware");
-
 const router = express.Router();
 
-// Routes Tạo thanh toán + gọi về
+const {
+    createPayment,
+    vnpayCallback,
+    refundPayment,
+    getFailedPayments
+} = require("../controller/vnpayController");
 
+const { authMiddleware } = require("../middleware/authMiddleware");
+
+// Tạo thanh toán
 router.post("/vnpay/create", authMiddleware, createPayment);
-router.get("/vnpay/callback", vnpayCallback);
 
+// Callback từ VNPAY (không cần nữa vì redirect trực tiếp về frontend)
+// router.get("/vnpay/callback", vnpayCallback);
 
-// Routes Hoàn tiền + thất bại 
-
+// Hoàn tiền
 router.post("/vnpay/refund", authMiddleware, refundPayment);
+
+// Danh sách thất bại
 router.get("/vnpay/failed", authMiddleware, getFailedPayments);
 
 module.exports = router;

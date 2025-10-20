@@ -5,11 +5,15 @@ const { vnpConfig } = require("../config/vnpayConfig");
 const pad = (n) => n.toString().padStart(2, "0");
 
 const createVnpayUrl = (orderId, amount, ipAddr = "127.0.0.1") => {
-  const dt = new Date();
-  const yyyyMMddHHmmss = `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}${pad(dt.getHours())}${pad(dt.getMinutes())}${pad(dt.getSeconds())}`;
+  try {
+    console.log("🔧 VNPay Config:", vnpConfig);
+    console.log("🔧 Creating URL for orderId:", orderId, "amount:", amount);
+    
+    const dt = new Date();
+    const yyyyMMddHHmmss = `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}${pad(dt.getHours())}${pad(dt.getMinutes())}${pad(dt.getSeconds())}`;
 
-  // Normalize localhost/IPv6 to IPv4 localhost for compatibility
-  const normalizedIp = (ipAddr || "127.0.0.1").includes("::") ? "127.0.0.1" : ipAddr;
+    // Normalize localhost/IPv6 to IPv4 localhost for compatibility
+    const normalizedIp = (ipAddr || "127.0.0.1").includes("::") ? "127.0.0.1" : ipAddr;
 
   // Base params (do not include hash fields here)
   const baseParams = {
@@ -64,8 +68,12 @@ const createVnpayUrl = (orderId, amount, ipAddr = "127.0.0.1") => {
   console.log("✅ signData:", signData);
   console.log("✅ vnp_SecureHash:", signed);
 
-  // Vì đã encode từng value ở trên nên không encode lần nữa khi stringify
-  return `${vnpConfig.vnpUrl}?${qs.stringify(finalParams, { encode: false })}`;
+    // Vì đã encode từng value ở trên nên không encode lần nữa khi stringify
+    return `${vnpConfig.vnpUrl}?${qs.stringify(finalParams, { encode: false })}`;
+  } catch (error) {
+    console.error("❌ Error creating VNPay URL:", error);
+    throw error;
+  }
 };
 
 module.exports = { createVnpayUrl };
