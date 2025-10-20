@@ -69,7 +69,11 @@ export const cartProxy = createProxyMiddleware("/cart", {
   changeOrigin: true,
   pathRewrite: { "^/cart": "" },
 });
-
+export const paymentProxy = createProxyMiddleware("/news", {
+  target: process.env.NEWS_SERVICE_URL || "http://localhost:3007",
+  changeOrigin: true,
+  pathRewrite: { "^/payment": "" },
+});
 export const newsProxy = createProxyMiddleware("/news", {
   target: process.env.NEWS_SERVICE_URL || "http://localhost:3008",
   changeOrigin: true,
