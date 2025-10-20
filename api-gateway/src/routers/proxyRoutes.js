@@ -148,6 +148,7 @@ export const repairProxy = createProxyMiddleware("/repair", {
     changeOrigin: true,
     pathRewrite: { "^/repair": "" },
 });
+console.log("CART_SERVICE_URL =", process.env.CART_SERVICE_URL);
 
 export default router;
 

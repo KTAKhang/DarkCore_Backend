@@ -7,18 +7,26 @@ const { authAdminMiddleware, authUserMiddleware } = require("../middlewares/auth
 const {
     createDiscount,
     getAllDiscounts,
+    getAllDiscountsLegacy,
     getActiveDiscounts,
     getByCode,
     updateDiscount,
     deactivateDiscount,
-    applyDiscount
+    applyDiscount,
+    searchDiscounts
 } = require("../controllers/discount.controller");
 
 // POST /discounts - Admin create
 router.post("/discounts", authUserMiddleware, authAdminMiddleware, createDiscount);
 
-// GET /discounts - Admin list all
+// GET /discounts - Admin list all (với phân trang, sort, filter)
 router.get("/discounts", authUserMiddleware, authAdminMiddleware, getAllDiscounts);
+
+// GET /discounts/legacy - Admin list all (method cũ)
+router.get("/discounts/legacy", authUserMiddleware, authAdminMiddleware, getAllDiscountsLegacy);
+
+// GET /discounts/search - Admin search discounts
+router.get("/discounts/search", authUserMiddleware, authAdminMiddleware, searchDiscounts);
 
 // GET /discounts/active - Public via gateway auth (any logged-in user)
 router.get("/discounts/active", authUserMiddleware, getActiveDiscounts);
