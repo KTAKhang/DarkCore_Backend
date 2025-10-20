@@ -13,8 +13,9 @@ import {
   cartProxy,
   newsProxy,
   orderProxy,
-  favoriteProxy, // ✅ Thêm import
+  favoriteProxy,
   repairProxy,
+  productReviewProxy
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -70,7 +71,9 @@ app.use("/cart", gatewayAuth, cartProxy);
 app.use("/profile", gatewayAuth, profileProxy);
 app.use("/customer", gatewayAuth, customerProxy);
 
-// Repair service (require JWT)
+app.use("/review", gatewayAuth, productReviewProxy);
+
+
 app.use("/repair", gatewayAuth, repairProxy);
 
 // Order service (require JWT)
@@ -87,8 +90,8 @@ app.get("/", (req, res) => {
 // ✅ Fixed syntax: closed string, braces, parentheses
 app.listen(PORT, () => {
   console.log(`✅ API Gateway running at http://localhost:${PORT}`);
-  console.log(
-    `🔧 Targets → 
+  console.log(`
+    🔧 Targets → 
     AUTH: ${process.env.AUTH_SERVICE_URL || "http://localhost:3001"}
     STAFF: ${process.env.STAFF_SERVICE_URL || "http://localhost:3003"}
     CATALOG: ${process.env.CATALOG_SERVICE_URL || "http://localhost:3002"}
@@ -101,3 +104,6 @@ app.listen(PORT, () => {
     REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost:4006"}`
   );
 });
+
+  
+

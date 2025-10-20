@@ -1,5 +1,5 @@
+const mongoose = require("mongoose");
 const UserModel = require("../models/UserModel");
-
 
 // Middleware lấy user từ header do Gateway gửi sang
 const attachUserFromHeader = async (req, res, next) => {
@@ -7,7 +7,11 @@ const attachUserFromHeader = async (req, res, next) => {
         if (req.headers["x-user"]) {
             const userFromHeader = JSON.parse(req.headers["x-user"]);
 
-            // Luôn lấy user từ DB để đảm bảo thông tin mới nhất
+            // Kiểm tra ObjectId hợp lệ
+            if (!mongoose.Types.ObjectId.isValid(userFromHeader._id)) {
+                return res.status(400).json({ message: "Invalid user id", status: "ERR" });
+            }
+
             const user = await UserModel.findById(userFromHeader._id);
 
             if (!user) {
@@ -33,8 +37,8 @@ const attachUserFromHeader = async (req, res, next) => {
 // Middleware chỉ cho Admin
 const authAdminMiddleware = async (req, res, next) => {
     try {
-        if (!req.user) {
-            return res.status(401).json({ message: "No user data", status: "ERR" });
+        if (!req.user || !mongoose.Types.ObjectId.isValid(req.user._id)) {
+            return res.status(401).json({ message: "No user data or invalid id", status: "ERR" });
         }
 
         const userData = await UserModel.findById(req.user._id).populate("role_id", "name");
@@ -70,12 +74,33 @@ const authMiddleware = async (req, res, next) => {
     }
 };
 
-// Middleware chỉ cần user login (không phân biệt role)
-const authUserMiddleware = (req, res, next) => {
-    if (!req.user) {
-        return res.status(401).json({ message: "No user data", status: "ERR" });
+const authUserMiddleware = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ message: "No user data", status: "ERR" });
+        }
+        next();
+    } catch (err) {
+        return res.status(500).json({ message: "Internal server error", status: "ERR" });
     }
-    next();
 };
 
-module.exports = { authMiddleware, authAdminMiddleware, authUserMiddleware, attachUserFromHeader };
+const authCustomerMiddleware = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ message: "No user data", status: "ERR" });
+        }
+
+        const userData = await UserModel.findById(req.user._id).populate("role_id", "name");
+
+        if (!userData || userData.role_id?.name !== "customer") {
+            return res.status(403).json({ message: "Access denied", status: "ERR" });
+        }
+
+        req.user = userData;
+        next();
+    } catch (err) {
+        return res.status(500).json({ message: "Internal server error", status: "ERR" });
+    }
+};
+module.exports = { authMiddleware, authAdminMiddleware, authUserMiddleware, attachUserFromHeader, authCustomerMiddleware };
