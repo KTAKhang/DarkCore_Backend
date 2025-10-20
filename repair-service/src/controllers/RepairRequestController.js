@@ -40,14 +40,16 @@ class RepairRequestController {
 
 	static async listAll(req, res) {
 		try {
-			const { username, status } = req.query;
+			const { username, status, page, limit } = req.query;
 			
 			const searchParams = {};
 			if (username && username.trim() !== '') searchParams.username = username.trim();
 			if (status && status.trim() !== '') searchParams.status = status.trim();
+			if (page) searchParams.page = parseInt(page);
+			if (limit) searchParams.limit = parseInt(limit);
 			
-			const data = await RepairRequestService.searchAndFilterRequests(searchParams);
-			return res.status(200).json({ status: "OK", data });
+			const result = await RepairRequestService.searchAndFilterRequests(searchParams);
+			return res.status(200).json({ status: "OK", data: result });
 		} catch (err) {
 			return res.status(500).json({ status: "ERR", message: err.message });
 		}
@@ -66,8 +68,14 @@ class RepairRequestController {
 	static async listAssigned(req, res) {
 		try {
 			const technicianId = req.user?._id || req.user?.id;
-			const data = await RepairRequestService.listAssignedTo(technicianId);
-			return res.status(200).json({ status: "OK", data });
+			const { page, limit } = req.query;
+			
+			const query = {};
+			if (page) query.page = parseInt(page);
+			if (limit) query.limit = parseInt(limit);
+			
+			const result = await RepairRequestService.listAssignedTo(technicianId, query);
+			return res.status(200).json({ status: "OK", data: result });
 		} catch (err) {
 			return res.status(500).json({ status: "ERR", message: err.message });
 		}
