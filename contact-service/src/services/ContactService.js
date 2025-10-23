@@ -2,6 +2,7 @@ const Contact = require("../model/ContactModel");
 const ContactReply = require("../model/ContactReplyModel");
 const { v4: uuidv4 } = require("uuid");
 const cloudinary = require("../config/cloudinaryConfig");
+const mongoose = require("mongoose");
 
 // ==============================
 // 🟢 CREATE CONTACT
@@ -26,7 +27,7 @@ const createContact = async (data) => {
 };
 
 // ==============================
-// 🟡 LIST CONTACTS - WITH REPLIES
+// 🟡 LIST CONTACTS - WITH REPLIES (SEARCH: USER + SUBJECT)
 // ==============================
 const listContacts = async (queryParams, user) => {
     try {
@@ -69,15 +70,6 @@ const listContacts = async (queryParams, user) => {
         if (status && status !== "all") query.status = status;
         if (reason && reason !== "all") query.reason = reason;
         if (priority && priority !== "all") query.priority = priority;
-        if (search) {
-            query.$or = [
-                { subject: { $regex: `^${search}`, $options: "i" } },
-                { message: { $regex: `^${search}`, $options: "i" } },
-                { "userId.user_name": { $regex: `^${search}`, $options: "i" } },
-                { "userId.email": { $regex: `^${search}`, $options: "i" } },
-            ];
-        }
-
 
         if (dateFrom) query.createdAt = { $gte: new Date(dateFrom) };
         if (dateTo) query.createdAt = { ...query.createdAt, $lte: new Date(dateTo) };
@@ -86,29 +78,97 @@ const listContacts = async (queryParams, user) => {
         const limitNum = parseInt(limit);
         const sortOrder = order === "asc" ? 1 : -1;
 
-        console.log("📋 [Final Query]:", JSON.stringify(query, null, 2));
+        console.log("📋 [Initial Query]:", JSON.stringify(query, null, 2));
+        if (search) console.log("🔍 [Search Term]:", search);
 
-        // ✅ Fetch contacts với userId + updatedBy
-        const contacts = await Contact.find(query)
+        // ✅ Strategy: Load ALL contacts matching base filters, then filter by search in JavaScript
+        let contacts = [];
+        let total = 0;
+
+        // Fetch ALL contacts
+        const allContacts = await Contact.find(query)
             .populate("userId", "email user_name avatar")
             .populate("updatedBy", "email user_name avatar")
             .sort({ [sortBy]: sortOrder })
-            .skip((pageNum - 1) * limitNum)
-            .limit(limitNum)
-            .lean(); // Dùng lean() để tối ưu performance
+            .lean();
+
+        console.log(`📊 [Initial fetch] Found: ${allContacts.length} contacts from DB`);
+
+        // ✅ Filter by search term if exists (userName, email, subject only)
+        if (search && search.trim()) {
+            const searchLower = search.trim().toLowerCase();
+            
+            contacts = allContacts.filter(contact => {
+                const userName = contact.userId?.user_name?.toLowerCase() || "";
+                const userEmail = contact.userId?.email?.toLowerCase() || "";
+                const subject = contact.subject?.toLowerCase() || "";
+                
+                const matchUser = userName.includes(searchLower);
+                const matchEmail = userEmail.includes(searchLower);
+                const matchSubject = subject.includes(searchLower);
+
+                if (matchUser || matchEmail || matchSubject) {
+                    console.log(`✅ [Match found] Contact: ${contact.ticketId}`, {
+                        userName,
+                        userEmail,
+                        subject: subject.substring(0, 30),
+                        matchedBy: matchUser ? 'userName' : matchEmail ? 'email' : 'subject'
+                    });
+                }
+                
+                return matchUser || matchEmail || matchSubject;
+            });
+
+            console.log(`📊 [After search filter] Found: ${contacts.length} contacts`);
+        } else {
+            contacts = allContacts;
+        }
+
+        // ✅ Apply sort on filtered results (chỉ sort nếu chưa sort ở DB)
+        // Vì search filter phá vỡ sort từ DB, nên phải sort lại
+        if (search && search.trim()) {
+            contacts.sort((a, b) => {
+                let aVal = a[sortBy];
+                let bVal = b[sortBy];
+                
+                // Handle nested fields (e.g., userId.user_name)
+                if (sortBy.includes('.')) {
+                    const keys = sortBy.split('.');
+                    aVal = keys.reduce((obj, key) => obj?.[key], a);
+                    bVal = keys.reduce((obj, key) => obj?.[key], b);
+                }
+                
+                // Handle dates
+                if (aVal instanceof Date || bVal instanceof Date || sortBy.includes('At')) {
+                    aVal = new Date(aVal).getTime();
+                    bVal = new Date(bVal).getTime();
+                }
+                
+                // Compare
+                if (aVal < bVal) return sortOrder === 1 ? -1 : 1;
+                if (aVal > bVal) return sortOrder === 1 ? 1 : -1;
+                return 0;
+            });
+            console.log(`🔄 [Re-sorted] after search filter by ${sortBy} ${order}`);
+        }
+
+        // ✅ Apply pagination
+        total = contacts.length;
+        const startIndex = (pageNum - 1) * limitNum;
+        contacts = contacts.slice(startIndex, startIndex + limitNum);
+
+        console.log(`📊 [After pagination] Returning: ${contacts.length} contacts (total: ${total})`)
 
         // ✅ Fetch replies cho từng contact
         const contactIds = contacts.map(c => c._id);
 
-        // Nếu là admin thì lấy tất cả replies (kể cả internal)
-        // Nếu là user thì chỉ lấy replies không phải internal
         const replyQuery = user?.isAdmin || user?.role?.toLowerCase() === "admin" || user?.role_name?.toLowerCase() === "admin"
             ? { contactId: { $in: contactIds } }
             : { contactId: { $in: contactIds }, isInternal: false };
 
         const replies = await ContactReply.find(replyQuery)
             .populate("senderId", "user_name email role_name avatar")
-            .sort({ createdAt: 1 }) // Sắp xếp theo thời gian tăng dần
+            .sort({ createdAt: 1 })
             .lean();
 
         // ✅ Gắn replies vào từng contact
@@ -117,9 +177,7 @@ const listContacts = async (queryParams, user) => {
             replies: replies.filter(r => r.contactId.toString() === contact._id.toString())
         }));
 
-        const total = await Contact.countDocuments(query);
-
-        console.log(`✅ [Result] Found ${contactsWithReplies.length} contacts out of ${total} total`);
+        console.log(`✅ [Final Result] Returning ${contactsWithReplies.length} contacts out of ${total} total`);
 
         return {
             data: contactsWithReplies,
