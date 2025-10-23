@@ -13,13 +13,11 @@ import {
   cartProxy,
   newsProxy,
   orderProxy,
-
   contactProxy,
-
   discountProxy,
   favoriteProxy,
-  repairProxy
-  productReviewProxy
+  repairProxy,
+  productReviewProxy, 
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -54,11 +52,14 @@ app.options(
 );
 
 app.use(morgan("dev"));
+
 // --- Public routes ---
 app.use("/auth", authProxy);
 app.use("/cataloghome", cataloghomeProxy);
+
 // --- Protected routes ---
 app.use("/api/favorites", gatewayAuth, favoriteProxy);
+
 // Catalog service (require JWT)
 app.use("/catalog", gatewayAuth, catalogProxy);
 app.use("/staff", gatewayAuth, staffProxy);
@@ -66,10 +67,8 @@ app.use("/cart", gatewayAuth, cartProxy);
 app.use("/profile", gatewayAuth, profileProxy);
 app.use("/customer", gatewayAuth, customerProxy);
 app.use("/contacts", gatewayAuth, contactProxy);
-// Repair service (require JWT for all routes; can relax per need)
 app.use("/repair", gatewayAuth, repairProxy);
 app.use("/review", gatewayAuth, productReviewProxy);
-// Order service (require JWT)
 app.use("/order", gatewayAuth, orderProxy);
 app.use("/discount", gatewayAuth, discountProxy);
 app.use("/news", gatewayAuth, newsProxy);
@@ -79,7 +78,7 @@ app.get("/", (req, res) => {
   res.send("🚀 API Gateway is running");
 });
 
-// ✅ Fixed syntax: closed string, braces, parentheses
+// ✅ Fixed template string syntax
 app.listen(PORT, () => {
   console.log(`✅ API Gateway running at http://localhost:${PORT}`);
   console.log(`🔧 Targets →
@@ -87,7 +86,7 @@ app.listen(PORT, () => {
     STAFF: ${process.env.STAFF_SERVICE_URL || "http://localhost:3003"}
     CATALOG: ${process.env.CATALOG_SERVICE_URL || "http://localhost:3002"}
     CATALOGHOME: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"}
-    CONTACT: ${process.env.CONTACT_SERVICE_URL || "http://localhost:3020"}`
+    CONTACT: ${process.env.CONTACT_SERVICE_URL || "http://localhost:3020"}
     FAVORITE: ${process.env.FAVORITE_SERVICE_URL || "http://localhost:3009"}
     NEWS: ${process.env.NEWS_SERVICE_URL || "http://localhost:3008"}
     ORDER: ${process.env.ORDER_SERVICE_URL || "http://localhost:3010"}
@@ -97,4 +96,3 @@ app.listen(PORT, () => {
     PAYMENT: ${process.env.PAYMENT_SERVICE_URL || "http://localhost:3007"}
   `);
 });
-
