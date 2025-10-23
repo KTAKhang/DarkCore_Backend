@@ -13,11 +13,13 @@ import {
   cartProxy,
   newsProxy,
   orderProxy,
+
+  contactProxy,
+
   discountProxy,
   favoriteProxy,
   repairProxy
   productReviewProxy
-
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -63,6 +65,8 @@ app.use("/staff", gatewayAuth, staffProxy);
 app.use("/cart", gatewayAuth, cartProxy);
 app.use("/profile", gatewayAuth, profileProxy);
 app.use("/customer", gatewayAuth, customerProxy);
+app.use("/contacts", gatewayAuth, contactProxy);
+// Repair service (require JWT for all routes; can relax per need)
 app.use("/repair", gatewayAuth, repairProxy);
 app.use("/review", gatewayAuth, productReviewProxy);
 // Order service (require JWT)
@@ -83,6 +87,7 @@ app.listen(PORT, () => {
     STAFF: ${process.env.STAFF_SERVICE_URL || "http://localhost:3003"}
     CATALOG: ${process.env.CATALOG_SERVICE_URL || "http://localhost:3002"}
     CATALOGHOME: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"}
+    CONTACT: ${process.env.CONTACT_SERVICE_URL || "http://localhost:3020"}`
     FAVORITE: ${process.env.FAVORITE_SERVICE_URL || "http://localhost:3009"}
     NEWS: ${process.env.NEWS_SERVICE_URL || "http://localhost:3008"}
     ORDER: ${process.env.ORDER_SERVICE_URL || "http://localhost:3010"}
