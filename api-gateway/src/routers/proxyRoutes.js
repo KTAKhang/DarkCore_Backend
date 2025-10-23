@@ -51,6 +51,11 @@ export const customerProxy = createProxyMiddleware("/customer", {
   changeOrigin: true,
   pathRewrite: { "^/customer": "" },
 });
+export const productReviewProxy = createProxyMiddleware("/review", {
+  target: process.env.USER_SERVICE_URL || "http://localhost:3030",
+  changeOrigin: true,
+  pathRewrite: { "^/review": "" },
+});
 
 // Catalog Home Service
 export const cataloghomeProxy = createProxyMiddleware("/cataloghome", {
@@ -64,7 +69,11 @@ export const cartProxy = createProxyMiddleware("/cart", {
   changeOrigin: true,
   pathRewrite: { "^/cart": "" },
 });
-
+export const paymentProxy = createProxyMiddleware("/news", {
+  target: process.env.NEWS_SERVICE_URL || "http://localhost:3007",
+  changeOrigin: true,
+  pathRewrite: { "^/payment": "" },
+});
 export const newsProxy = createProxyMiddleware("/news", {
   target: process.env.NEWS_SERVICE_URL || "http://localhost:3008",
   changeOrigin: true,
@@ -95,6 +104,34 @@ export const orderProxy = createProxyMiddleware("/order", {
   },
 });
 
+// Discount Service Proxy
+export const discountProxy = createProxyMiddleware("/discount", {
+  target: process.env.DISCOUNT_SERVICE_URL || "http://localhost:4009",
+  changeOrigin: true,
+  // Map gateway prefix /discount -> service /api
+  pathRewrite: { "^/discount": "/api" },
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Discount service unavailable");
+  },
+});
+
 // ✅ Favorite Service (part of CatalogHome - port 3004)
 export const favoriteProxy = createProxyMiddleware("/api/favorites", {
   target: process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004",
@@ -120,10 +157,11 @@ export const favoriteProxy = createProxyMiddleware("/api/favorites", {
 
 // Repair Service
 export const repairProxy = createProxyMiddleware("/repair", {
-    target: process.env.REPAIR_SERVICE_URL || "http://localhost:4006",
-    changeOrigin: true,
-    pathRewrite: { "^/repair": "" },
+  target: process.env.REPAIR_SERVICE_URL || "http://localhost:4006",
+  changeOrigin: true,
+  pathRewrite: { "^/repair": "" },
 });
+console.log("CART_SERVICE_URL =", process.env.CART_SERVICE_URL);
 
 export default router;
 

@@ -12,8 +12,13 @@ class RepairServiceController {
 
 	static async list(req, res) {
 		try {
-			const data = await RepairServiceService.listServices();
-			return res.status(200).json({ status: "OK", data });
+			const { page, limit } = req.query;
+			const query = {};
+			if (page) query.page = parseInt(page);
+			if (limit) query.limit = parseInt(limit);
+			
+			const result = await RepairServiceService.listServices(query);
+			return res.status(200).json({ status: "OK", data: result });
 		} catch (err) {
 			return res.status(500).json({ status: "ERR", message: err.message });
 		}
