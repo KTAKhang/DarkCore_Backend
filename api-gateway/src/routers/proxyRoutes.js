@@ -71,7 +71,7 @@ export const newsProxy = createProxyMiddleware("/news", {
   pathRewrite: { "^/news": "" },
 });
 export const contactProxy = createProxyMiddleware("/contacts", {
-  target: process.env.CONTACT_SERVICE_URL || "http://localhost:3009",
+  target: process.env.CONTACT_SERVICE_URL || "http://localhost:3020",
   changeOrigin: true,
   pathRewrite: { "^/contacts": "/contacts" },
 });

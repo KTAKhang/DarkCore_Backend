@@ -97,7 +97,7 @@ app.listen(PORT, () => {
     NEWS: ${process.env.NEWS_SERVICE_URL || "http://localhost:3008"}
     ORDER: ${process.env.ORDER_SERVICE_URL || "http://localhost:3010"}
     REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost:4006"}
-    CONTACT: ${process.env.CONTACT_SERVICE_URL || "http://localhost:3009"}`
+    CONTACT: ${process.env.CONTACT_SERVICE_URL || "http://localhost:3020"}`
   );
 });
   
