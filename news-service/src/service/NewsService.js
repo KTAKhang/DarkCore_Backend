@@ -141,11 +141,30 @@ const listNews = async ({
   limit = 10,
 }) => {
   try {
-    // Tạo object filter dựa trên các tham số
-    const filter = { ...(status && { status }) }; // Lọc theo trạng thái nếu có
-    if (q) filter.$text = { $search: q }; // Tìm kiếm full-text nếu có query
-    if (author) filter["author.name"] = new RegExp(author, "i"); // Lọc theo tên tác giả (không phân biệt hoa thường)
-    if (tags) filter.tags = { $in: tags.split(",").map((t) => t.trim()) }; // Lọc theo danh sách tags
+
+    const filter = { ...(status && { status }) };
+    // if (q) filter.$text = { $search: q };  //by cluster
+    if (q) {
+      let regex;
+
+      // Nếu người dùng chỉ nhập 1 ký tự -> tìm từ bắt đầu bằng chữ đó
+      if (q.length === 1) {
+        regex = new RegExp(`\\b${q}`, 'i');
+      } else {
+        // Nếu nhập nhiều hơn 1 ký tự -> tìm theo cụm
+        regex = new RegExp(q, 'i');
+      }
+
+      filter.$or = [
+        { title: regex },
+        { summary: regex },
+        { content: regex },
+        { tags: { $elemMatch: { $regex: regex } } },
+      ];
+    }
+    if (author) filter["author.name"] = new RegExp(author, "i");
+    if (tags) filter.tags = { $in: tags.split(",").map((t) => t.trim()) };
+
 
     // Tạo object sort
     const sort = {};

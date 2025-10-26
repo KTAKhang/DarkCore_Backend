@@ -2,15 +2,15 @@
   "name": "nodejs-for-beginner",
   "version": "1.0.0",
   "description": "learning node js",
-  "main": "src/server.js",
   "type": "commonjs",
-  "scripts": {  
+  "main": "src/server.js",
+  "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js"
   },
   "repository": {
     "type": "git",
-    "url": "(https://github.com/KTAKhang/Youtube_FullStack_Nodejs_ForBeginer)"
+    "url": "https://github.com/KTAKhang/Youtube_FullStack_Nodejs_ForBeginer"
   },
   "keywords": [
     "nodejs",
@@ -26,6 +26,7 @@
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "dotenv": "^16.6.1",
+    "eco-be": "file:",
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "google-auth-library": "^9.15.1",

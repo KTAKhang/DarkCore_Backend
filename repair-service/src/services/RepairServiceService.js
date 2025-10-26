@@ -5,8 +5,25 @@ class RepairServiceService {
 		return await RepairServiceModel.create(payload);
 	}
 
-	static async listServices() {
-		return await RepairServiceModel.find({}).sort({ createdAt: -1 });
+	static async listServices(query = {}) {
+		const { page = 1, limit = 5 } = query;
+		
+		const services = await RepairServiceModel.find({})
+			.sort({ createdAt: -1 })
+			.skip((page - 1) * limit)
+			.limit(parseInt(limit));
+			
+		const total = await RepairServiceModel.countDocuments({});
+		
+		return {
+			services,
+			pagination: {
+				page: parseInt(page),
+				limit: parseInt(limit),
+				total,
+				totalPages: Math.ceil(total / limit)
+			}
+		};
 	}
 
 	static async updateService(id, payload) {
