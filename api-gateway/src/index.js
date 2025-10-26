@@ -17,7 +17,8 @@ import {
   discountProxy,
   favoriteProxy,
   repairProxy,
-  productReviewProxy, 
+  productReviewProxy,
+  productReviewGuestProxy
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -66,9 +67,10 @@ app.use("/staff", gatewayAuth, staffProxy);
 app.use("/cart", gatewayAuth, cartProxy);
 app.use("/profile", gatewayAuth, profileProxy);
 app.use("/customer", gatewayAuth, customerProxy);
+app.use("/review", gatewayAuth, productReviewProxy);
+app.use("/review-guest", productReviewGuestProxy);
 app.use("/contacts", gatewayAuth, contactProxy);
 app.use("/repair", gatewayAuth, repairProxy);
-app.use("/review", gatewayAuth, productReviewProxy);
 app.use("/order", gatewayAuth, orderProxy);
 app.use("/discount", gatewayAuth, discountProxy);
 app.use("/news", gatewayAuth, newsProxy);
@@ -96,3 +98,4 @@ app.listen(PORT, () => {
     PAYMENT: ${process.env.PAYMENT_SERVICE_URL || "http://localhost:3007"}
   `);
 });
+

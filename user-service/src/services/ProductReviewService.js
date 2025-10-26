@@ -88,91 +88,68 @@ async function updateReview(review_id, updateData, user_id) {
 
 async function getAllReviews(product_id, { rating, page = 1, limit = 5, sortBy = "newest" }) {
     try {
-        // ✅ Bộ lọc chính
-        const filter = { product_id, status: true };
-        if (rating && rating !== "all") {
-            const ratingNumber = Number(rating);
-            if (!isNaN(ratingNumber) && ratingNumber >= 1 && ratingNumber <= 5) {
-                filter.rating = ratingNumber;
-            }
+        if (!product_id || !mongoose.Types.ObjectId.isValid(product_id)) {
+            throw new Error("ID sản phẩm không hợp lệ");
         }
+        const productExists = await ProductModel.exists({ _id: product_id });
+        if (!productExists) {
+            throw new Error("Sản phẩm không tồn tại");
+        }
+
+        const filter = { product_id, status: true };
+
+        const ratingNum = Number(rating);
+        if (rating && rating !== "all" && !isNaN(ratingNum) && ratingNum >= 1 && ratingNum <= 5)
+            filter.rating = ratingNum;
 
         const skip = (page - 1) * limit;
+        const sortOptions = {
+            newest: { updatedAt: -1 },
+            oldest: { updatedAt: 1 },
+            lowest: { rating: 1, createdAt: -1 }
+        };
+        const sortOption = sortOptions[sortBy] || sortOptions.newest;
 
-        // ✅ Sắp xếp
-        let sortOption = { createdAt: -1 };
-        switch (sortBy) {
-            case "oldest":
-                sortOption = { createdAt: 1 };
-                break;
-            case "lowest":
-                sortOption = { rating: 1, createdAt: -1 };
-                break;
-        }
+        // Truy vấn song song
+        const [totalReviews, totalAllReviews, reviews] = await Promise.all([
+            ProductReviewModel.countDocuments(filter),
+            ProductReviewModel.countDocuments({ product_id, status: true }),
+            ProductReviewModel.find(filter)
+                .populate("user_id", "user_name avatar")
+                .sort(sortOption)
+                .skip(skip)
+                .limit(limit)
+        ]);
 
-        // ✅ Tổng số review theo filter hiện tại
-        const totalReviews = await ProductReviewModel.countDocuments(filter);
-
-        // ✅ Tổng số review của sản phẩm (bỏ qua filter rating)
-        const totalAllReviews = await ProductReviewModel.countDocuments({
-            product_id,
-            status: true
-        });
-
-        // ✅ Lấy danh sách review
-        const reviews = await ProductReviewModel.find(filter)
-            .populate("user_id", "user_name avatar")
-            .sort(sortOption)
-            .skip(skip)
-            .limit(limit);
-
-        // ✅ Xử lý ObjectId cho aggregate
-        let matchProductId;
-        try {
-            matchProductId = new mongoose.Types.ObjectId(product_id);
-        } catch (err) {
-            matchProductId = product_id;
-        }
-
-        // ✅ Thống kê số lượng đánh giá theo từng sao (1–5)
+        // Lấy thống kê rating
         const ratingStats = await ProductReviewModel.aggregate([
-            { $match: { product_id: matchProductId, status: true } },
+            { $match: { product_id: new mongoose.Types.ObjectId(product_id), status: true } },
             { $group: { _id: "$rating", count: { $sum: 1 } } }
         ]);
 
-        const totalAll = ratingStats.reduce((sum, item) => sum + item.count, 0);
-
-        // ✅ Chuẩn hóa mảng kết quả
-        const ratingCounts = [5, 4, 3, 2, 1].map((star) => {
-            const found = ratingStats.find((r) => r._id === star);
-            const count = found ? found.count : 0;
+        const totalAll = ratingStats.reduce((sum, i) => sum + i.count, 0);
+        const ratingMap = Object.fromEntries(ratingStats.map(r => [r._id, r.count]));
+        const ratingCounts = [5, 4, 3, 2, 1].map(star => {
+            const count = ratingMap[star] || 0;
             return {
                 star,
                 count,
-                percentage: totalAll
-                    ? Number(((count / totalAll) * 100).toFixed(1))
-                    : 0
+                percentage: totalAll ? +(count / totalAll * 100).toFixed(1) : 0
             };
         });
 
-        // ✅ Trung bình số sao
-        const totalStars = ratingCounts.reduce(
-            (sum, rc) => sum + rc.star * rc.count,
-            0
-        );
-        const averageRating =
-            totalAll > 0 ? Number((totalStars / totalAll).toFixed(1)) : 0;
+        const totalStars = ratingCounts.reduce((sum, { star, count }) => sum + star * count, 0);
+        const averageRating = totalAll ? +(totalStars / totalAll).toFixed(1) : 0;
 
-        // ✅ Kết quả cuối
         return {
-            total: totalReviews,           // số review theo filter hiện tại
-            totalAllReviews,              // tổng tất cả review của sản phẩm
+            total: totalReviews,
+            totalAllReviews,
             page,
             limit,
             hasMore: skip + reviews.length < totalReviews,
             averageRating,
             ratingCounts,
-            reviews: reviews.map((r) => ({
+            reviews: reviews.map(r => ({
                 _id: r._id,
                 rating: r.rating,
                 content: r.review_content,
@@ -186,9 +163,11 @@ async function getAllReviews(product_id, { rating, page = 1, limit = 5, sortBy =
         };
     } catch (error) {
         console.error("Error in getAllReviews:", error);
-        throw new Error("Lỗi khi lấy danh sách đánh giá");
+        throw new Error(error.message || "Lỗi khi lấy danh sách đánh giá");
     }
 }
+
+
 
 
 async function getAllReviewsByUserId(user_id) {
@@ -362,7 +341,6 @@ async function getProductReviewByOrderDetailId(order_detail_id) {
 }
 
 async function getProductReviewByOrderId(order_id) {
-    // ✅ Kiểm tra ObjectId hợp lệ trước khi truy vấn
     if (!mongoose.Types.ObjectId.isValid(order_id)) {
         throw new Error("Không tìm thấy chi tiết đơn hàng cho order_id này");
     }
@@ -372,12 +350,11 @@ async function getProductReviewByOrderId(order_id) {
     }
     const orderDetailIds = orderDetails.map(od => od._id);
     const reviews = await ProductReviewModel.find({ order_detail_id: { $in: orderDetailIds } })
-    // 3️⃣ Tạo Map để tra nhanh review theo order_detail_id
+
     const reviewMap = new Map();
     reviews.forEach(review => {
         reviewMap.set(review.order_detail_id.toString(), review);
     });
-    // 4️⃣ Duyệt qua từng orderDetail → ghép với review (nếu có)
     const result = orderDetails.map(od => {
         const review = reviewMap.get(od._id.toString());
         return {
@@ -475,14 +452,13 @@ async function getReviewDetail(review_id) {
     }
 }
 
-// ✅ Cập nhật trạng thái review (ví dụ: duyệt / ẩn)
 async function updateReviewStatus(review_id, newStatus) {
     try {
         if (!review_id) {
             throw new Error("Thiếu ID đánh giá");
         }
 
-        // Kiểm tra kiểu dữ liệu hợp lệ
+
         if (typeof newStatus !== "boolean") {
             throw new Error("Trạng thái không hợp lệ (phải là true hoặc false)");
         }
