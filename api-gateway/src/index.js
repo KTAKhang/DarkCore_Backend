@@ -15,7 +15,8 @@ import {
   orderProxy,
   favoriteProxy,
   repairProxy,
-  productReviewProxy
+  productReviewProxy,
+  productReviewGuestProxy
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -71,6 +72,7 @@ app.use("/cart", gatewayAuth, cartProxy);
 app.use("/profile", gatewayAuth, profileProxy);
 app.use("/customer", gatewayAuth, customerProxy);
 app.use("/review", gatewayAuth, productReviewProxy);
+app.use("/review-guest", productReviewGuestProxy);
 
 // Repair service (require JWT for all routes; can relax per need)
 app.use("/repair", gatewayAuth, repairProxy);
@@ -99,4 +101,4 @@ app.listen(PORT, () => {
     REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost:4006"}`
   );
 });
-  
+

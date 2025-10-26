@@ -57,6 +57,12 @@ export const productReviewProxy = createProxyMiddleware("/review", {
   pathRewrite: { "^/review": "" },
 });
 
+export const productReviewGuestProxy = createProxyMiddleware("/review-guest", {
+  target: process.env.USER_SERVICE_URL || "http://localhost:3030",
+  changeOrigin: true,
+  pathRewrite: { "^/review-guest": "" },
+});
+
 // Catalog Home Service
 export const cataloghomeProxy = createProxyMiddleware("/cataloghome", {
   target: process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004",

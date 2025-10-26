@@ -229,16 +229,13 @@ const getProductReviewByOrderDetailId = async (req, res) => {
 const getProductReviewsByOrderId = async (req, res) => {
     try {
         const { order_id } = req.params;
-
         if (!order_id) {
             return res.status(400).json({
                 success: false,
                 message: "Thiếu ID đơn hàng"
             });
         }
-
         const reviews = await ProductReviewService.getProductReviewByOrderId(order_id);
-
         return res.status(200).json({
             success: true,
             message: "Lấy đánh giá theo đơn hàng thành công",
