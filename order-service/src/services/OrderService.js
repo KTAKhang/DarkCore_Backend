@@ -4,6 +4,17 @@ const OrderStatusModel = require("../models/OrderStatusModel");
 const UserModel = require("../models/UserModel");
 const ProductModel = require("../models/ProductModel");
 
+// ✅ Helper: Định nghĩa luồng chuyển trạng thái hợp lệ (DRY - Don't Repeat Yourself)
+const getValidTransitions = () => ({
+    pending: ["confirmed", "cancelled"],
+    confirmed: ["processing"],
+    processing: ["shipped"],
+    shipped: ["delivered"],
+    delivered: ["returned"],
+    cancelled: [],
+    returned: []
+});
+
 const createOrder = async (payload) => {
     try {
         const { userId, items, receiverName, receiverPhone, receiverAddress, paymentMethod, note } = payload;
@@ -100,7 +111,12 @@ const getOrders = async (query = {}) => {
         
         const filter = {};
         
-        // Filter theo userId nếu có
+        // 🔍 Search theo tên khách hàng (receiverName) - sử dụng regex để tìm kiếm không phân biệt hoa thường
+        if (query.search) {
+            filter.receiverName = { $regex: query.search, $options: 'i' };
+        }
+        
+        // Filter theo userId nếu có (giữ lại cho trường hợp cần thiết)
         if (query.userId) {
             filter.userId = query.userId;
         }
@@ -132,24 +148,15 @@ const getOrders = async (query = {}) => {
             }
         }
 
-        // Xử lý sort theo thời gian
+        // Xử lý sort - hỗ trợ createdAt và totalPrice
         let sortOption = { createdAt: -1 }; // Mặc định mới nhất
         const sortBy = (query.sortBy ?? "").toString().trim().toLowerCase();
-        const sortOrder = (query.sortOrder ?? "").toString().trim().toLowerCase();
+        const sortOrder = (query.sortOrder ?? "desc").toString().trim().toLowerCase();
         
-        const validSortFields = ["createdat", "created", "orderdate", "default", "none"];
-        const validSortOrders = ["asc", "desc"];
-        
-        const isValidSortBy = validSortFields.includes(sortBy);
-        const isValidSortOrder = validSortOrders.includes(sortOrder);
-        
-        if (sortBy === "default" || sortBy === "none" || sortBy === "" || !sortBy || !isValidSortBy) {
-            // Mặc định - mới nhất
-            sortOption = { createdAt: -1 };
-        } else if (isValidSortBy && isValidSortOrder) {
-            if (sortBy === "createdat" || sortBy === "created" || sortBy === "orderdate") {
-                sortOption = { createdAt: sortOrder === "desc" ? -1 : 1 };
-            }
+        if (sortBy === "createdat" || sortBy === "created" || sortBy === "orderdate") {
+            sortOption = { createdAt: sortOrder === "asc" ? 1 : -1 };
+        } else if (sortBy === "totalprice" || sortBy === "price") {
+            sortOption = { totalPrice: sortOrder === "asc" ? 1 : -1 };
         }
 
         // ✅ Sử dụng lean() để get plain objects với populate
@@ -160,26 +167,29 @@ const getOrders = async (query = {}) => {
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(); // ✅ Thêm lean() để get plain objects
-            
-        // ✅ Lấy order details và convert ObjectId thành string
-        const ordersWithDetails = await Promise.all(
-            orders.map(async (order) => {
-                const orderDetails = await OrderDetailModel.find({ orderId: order._id })
-                    .populate("productId", "name images price")
-                    .lean(); // ✅ Thêm lean() cho orderDetails cũng
-                
-                // ✅ Convert ObjectId thành string cho productId và orderId
-                const processedOrderDetails = orderDetails.map(detail => ({
-                    ...detail,
-                    productId: detail.productId ? detail.productId._id.toString() : null,
-                    orderId: detail.orderId.toString(),
-                    _id: detail._id.toString()
-                }));
-                
-                order.orderDetails = processedOrderDetails;
-                return order;
-            })
-        );
+        
+        // ✅ Tùy chọn: Lấy order details nếu cần (query.includeDetails=true)
+        let ordersWithDetails = orders;
+        if (query.includeDetails === "true" || query.includeDetails === true) {
+            ordersWithDetails = await Promise.all(
+                orders.map(async (order) => {
+                    const orderDetails = await OrderDetailModel.find({ orderId: order._id })
+                        .populate("productId", "name images price")
+                        .lean();
+                    
+                    // Convert ObjectId thành string cho productId và orderId
+                    const processedOrderDetails = orderDetails.map(detail => ({
+                        ...detail,
+                        productId: detail.productId ? detail.productId._id.toString() : null,
+                        orderId: detail.orderId.toString(),
+                        _id: detail._id.toString()
+                    }));
+                    
+                    order.orderDetails = processedOrderDetails;
+                    return order;
+                })
+            );
+        }
             
         const total = await OrderModel.countDocuments(filter);
         
@@ -244,27 +254,54 @@ const updateOrderStatus = async (id, payload) => {
         }
 
         // Kiểm tra order tồn tại
-        const order = await OrderModel.findById(id);
+        const order = await OrderModel.findById(id).populate("orderStatusId");
         if (!order) return { status: "ERR", message: "Không tìm thấy đơn hàng" };
 
         // Kiểm tra status tồn tại
-        const status = await OrderStatusModel.findById(orderStatusId);
-        if (!status) return { status: "ERR", message: "Không tìm thấy trạng thái" };
+        const newStatus = await OrderStatusModel.findById(orderStatusId);
+        if (!newStatus) return { status: "ERR", message: "Không tìm thấy trạng thái" };
+
+        const currentStatusName = order.orderStatusId.name;
+        const newStatusName = newStatus.name;
+
+        // ✅ Lấy luồng chuyển trạng thái hợp lệ
+        const validTransitions = getValidTransitions();
+
+        // ✅ Kiểm tra nếu status hiện tại giống status mới (không cần update)
+        if (currentStatusName === newStatusName) {
+            return { status: "ERR", message: `Đơn hàng đã ở trạng thái ${newStatusName}` };
+        }
+
+        // ✅ Kiểm tra luồng chuyển trạng thái
+        const allowedTransitions = validTransitions[currentStatusName];
+        if (!allowedTransitions || !allowedTransitions.includes(newStatusName)) {
+            return { 
+                status: "ERR", 
+                message: `Không thể chuyển từ trạng thái "${currentStatusName}" sang "${newStatusName}". Các trạng thái hợp lệ: ${allowedTransitions.length > 0 ? allowedTransitions.join(", ") : "không có"}` 
+            };
+        }
 
         // Cập nhật trạng thái
         const updateData = { orderStatusId };
         if (note) updateData.note = note;
         
         // Nếu chuyển sang delivered, cập nhật deliveredAt
-        if (status.name === "delivered") {
+        if (newStatusName === "delivered") {
             updateData.deliveredAt = new Date();
         }
         
         // Nếu chuyển sang cancelled, cập nhật cancelledAt
-        if (status.name === "cancelled") {
+        if (newStatusName === "cancelled") {
             updateData.cancelledAt = new Date();
             if (payload.cancelledReason) {
                 updateData.cancelledReason = payload.cancelledReason;
+            }
+        }
+
+        // Nếu chuyển sang returned, cập nhật thông tin
+        if (newStatusName === "returned") {
+            if (payload.returnReason) {
+                updateData.note = `Lý do trả hàng: ${payload.returnReason}`;
             }
         }
 
@@ -327,18 +364,60 @@ const getOrderStatuses = async () => {
     }
 };
 
+// 🆕 Lấy danh sách trạng thái tiếp theo hợp lệ cho một đơn hàng
+const getNextValidStatuses = async (orderId) => {
+    try {
+        // Kiểm tra order tồn tại
+        const order = await OrderModel.findById(orderId).populate("orderStatusId");
+        if (!order) return { status: "ERR", message: "Không tìm thấy đơn hàng" };
+
+        const currentStatusName = order.orderStatusId.name;
+
+        // Lấy luồng chuyển trạng thái hợp lệ
+        const validTransitions = getValidTransitions();
+
+        const allowedStatusNames = validTransitions[currentStatusName] || [];
+        
+        // Lấy chi tiết các trạng thái hợp lệ
+        const nextStatuses = await OrderStatusModel.find({ 
+            name: { $in: allowedStatusNames },
+            status: true,
+            isActive: true
+        }).sort({ sortOrder: 1 });
+
+        return { 
+            status: "OK", 
+            data: {
+                currentStatus: order.orderStatusId,
+                nextValidStatuses: nextStatuses
+            }
+        };
+    } catch (error) {
+        return { status: "ERR", message: error.message };
+    }
+};
+
 // 🆕 Lấy lịch sử đơn hàng của khách hàng
 const getOrderHistory = async (userId, query = {}) => {
     try {
-        // Kiểm tra user tồn tại
-        const user = await UserModel.findById(userId);
-        if (!user) return { status: "ERR", message: "Không tìm thấy người dùng" };
-
         // Validation và chuẩn hóa page, limit
         let page = Math.max(1, parseInt(query.page) || 1);
         let limit = Math.min(Math.max(1, parseInt(query.limit) || 10), 100); // Mặc định 10 items/trang
         
-        const filter = { userId }; // Chỉ lấy đơn hàng của user này
+        const filter = {};
+        
+        // Filter theo userId nếu có (không bắt buộc)
+        if (userId) {
+            // Kiểm tra user tồn tại nếu có userId
+            const user = await UserModel.findById(userId);
+            if (!user) return { status: "ERR", message: "Không tìm thấy người dùng" };
+            filter.userId = userId;
+        }
+        
+        // 🔍 Search theo tên khách hàng (receiverName)
+        if (query.search) {
+            filter.receiverName = { $regex: query.search, $options: 'i' };
+        }
         
         // Filter theo orderStatusId nếu có
         if (query.orderStatusId) {
@@ -367,27 +446,14 @@ const getOrderHistory = async (userId, query = {}) => {
             }
         }
 
-        // Filter theo khoảng thời gian nếu có
-        if (query.startDate || query.endDate) {
-            filter.createdAt = {};
-            if (query.startDate) {
-                filter.createdAt.$gte = new Date(query.startDate);
-            }
-            if (query.endDate) {
-                const endDate = new Date(query.endDate);
-                endDate.setHours(23, 59, 59, 999); // Set to end of day
-                filter.createdAt.$lte = endDate;
-            }
-        }
-
-        // Xử lý sort - mặc định mới nhất trên cùng
-        let sortOption = { createdAt: -1 };
+        // Xử lý sort - hỗ trợ createdAt và totalPrice
+        let sortOption = { createdAt: -1 }; // Mặc định mới nhất
         const sortBy = (query.sortBy ?? "").toString().trim().toLowerCase();
         const sortOrder = (query.sortOrder ?? "desc").toString().trim().toLowerCase();
         
-        if (sortBy === "createdAt" || sortBy === "orderDate") {
+        if (sortBy === "createdat" || sortBy === "created" || sortBy === "orderdate") {
             sortOption = { createdAt: sortOrder === "asc" ? 1 : -1 };
-        } else if (sortBy === "totalPrice") {
+        } else if (sortBy === "totalprice" || sortBy === "price") {
             sortOption = { totalPrice: sortOrder === "asc" ? 1 : -1 };
         }
 
@@ -450,5 +516,6 @@ module.exports = {
     updateOrderStatus,
     getOrderStats,
     getOrderStatuses,
+    getNextValidStatuses,
     getOrderHistory,
 };

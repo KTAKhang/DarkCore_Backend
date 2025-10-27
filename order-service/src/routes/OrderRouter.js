@@ -24,4 +24,7 @@ router.put("/orders/:id/status", OrderController.updateOrderStatus);
 // Lấy danh sách trạng thái đơn hàng
 router.get("/order-statuses", OrderController.getOrderStatuses);
 
+// 🆕 Lấy danh sách trạng thái tiếp theo hợp lệ cho một đơn hàng
+router.get("/orders/:orderId/next-statuses", OrderController.getNextValidStatuses);
+
 module.exports = router;
