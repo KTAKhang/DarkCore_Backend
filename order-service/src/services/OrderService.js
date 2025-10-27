@@ -1,8 +1,13 @@
+const mongoose = require("mongoose");
 const OrderModel = require("../models/OrderModel");
 const OrderDetailModel = require("../models/OrderDetailModel");
 const OrderStatusModel = require("../models/OrderStatusModel");
 const UserModel = require("../models/UserModel");
 const ProductModel = require("../models/ProductModel");
+
+// ============================================
+// 🔧 HELPER FUNCTIONS
+// ============================================
 
 // ✅ Helper: Định nghĩa luồng chuyển trạng thái hợp lệ (DRY - Don't Repeat Yourself)
 const getValidTransitions = () => ({
@@ -14,6 +19,10 @@ const getValidTransitions = () => ({
     cancelled: [],
     returned: []
 });
+
+// ============================================
+// 🔄 SHARED FUNCTIONS (Có thể dùng cho cả Admin và Customer)
+// ============================================
 
 const createOrder = async (payload) => {
     try {
@@ -103,6 +112,11 @@ const createOrder = async (payload) => {
     }
 };
 
+// ============================================
+// 👨‍💼 ADMIN FUNCTIONS
+// ============================================
+
+// ✅ Admin: Lấy danh sách đơn hàng với phân trang, filter và sort
 const getOrders = async (query = {}) => {
     try {
         // Validation và chuẩn hóa page, limit
@@ -111,9 +125,45 @@ const getOrders = async (query = {}) => {
         
         const filter = {};
         
-        // 🔍 Search theo tên khách hàng (receiverName) - sử dụng regex để tìm kiếm không phân biệt hoa thường
+        // 🔍 Search theo mã đơn hàng (orderId/orderNumber) hoặc tên khách hàng (receiverName)
+        // Hỗ trợ tìm kiếm một phần chuỗi, không phân biệt hoa thường
         if (query.search) {
-            filter.receiverName = { $regex: query.search, $options: 'i' };
+            const searchTerm = query.search.trim();
+            
+            // Escape các ký tự đặc biệt trong regex để tránh lỗi
+            const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            
+            // Kiểm tra xem search term có phải là ObjectId hợp lệ không
+            const isValidObjectId = mongoose.Types.ObjectId.isValid(searchTerm);
+            
+            const searchConditions = [];
+            
+            // Search theo orderNumber (mã đơn hàng như ORD202501160001) - tìm một phần chuỗi
+            searchConditions.push({ orderNumber: { $regex: escapedSearchTerm, $options: 'i' } });
+            
+            // Search theo _id: 
+            // - Nếu là ObjectId hợp lệ thì tìm chính xác
+            // - Nếu không, tìm một phần của ObjectId (convert _id sang string)
+            if (isValidObjectId) {
+                searchConditions.push({ _id: new mongoose.Types.ObjectId(searchTerm) });
+            } else {
+                // Tìm một phần của ObjectId bằng cách convert _id sang string
+                searchConditions.push({
+                    $expr: {
+                        $regexMatch: {
+                            input: { $toString: "$_id" },
+                            regex: escapedSearchTerm,
+                            options: "i"
+                        }
+                    }
+                });
+            }
+            
+            // Search theo tên khách hàng (receiverName) - tìm một phần chuỗi
+            searchConditions.push({ receiverName: { $regex: escapedSearchTerm, $options: 'i' } });
+            
+            // Sử dụng $or để tìm kiếm theo bất kỳ điều kiện nào
+            filter.$or = searchConditions;
         }
         
         // Filter theo userId nếu có (giữ lại cho trường hợp cần thiết)
@@ -214,6 +264,7 @@ const getOrders = async (query = {}) => {
     }
 };
 
+// ✅ Admin: Lấy chi tiết đơn hàng theo ID
 const getOrderById = async (id) => {
     try {
         const order = await OrderModel.findById(id)
@@ -245,6 +296,7 @@ const getOrderById = async (id) => {
     }
 };
 
+// ✅ Admin: Cập nhật trạng thái đơn hàng
 const updateOrderStatus = async (id, payload) => {
     try {
         const { orderStatusId, note } = payload;
@@ -315,6 +367,7 @@ const updateOrderStatus = async (id, payload) => {
     }
 };
 
+// ✅ Admin: Lấy thống kê đơn hàng
 const getOrderStats = async () => {
     try {
         // Lấy tất cả status trước
@@ -353,6 +406,7 @@ const getOrderStats = async () => {
     }
 };
 
+// ✅ Shared: Lấy danh sách trạng thái đơn hàng (dùng chung cho Admin và Customer)
 const getOrderStatuses = async () => {
     try {
         const statuses = await OrderStatusModel.find({ status: true, isActive: true })
@@ -364,7 +418,7 @@ const getOrderStatuses = async () => {
     }
 };
 
-// 🆕 Lấy danh sách trạng thái tiếp theo hợp lệ cho một đơn hàng
+// ✅ Admin: Lấy danh sách trạng thái tiếp theo hợp lệ cho một đơn hàng
 const getNextValidStatuses = async (orderId) => {
     try {
         // Kiểm tra order tồn tại
@@ -397,26 +451,107 @@ const getNextValidStatuses = async (orderId) => {
     }
 };
 
-// 🆕 Lấy lịch sử đơn hàng của khách hàng
+// ============================================
+// 👤 CUSTOMER FUNCTIONS
+// ============================================
+
+// ✅ Customer: Lấy chi tiết đơn hàng theo ID (chỉ xem được đơn hàng của chính họ)
+const getOrderByIdForCustomer = async (orderId, userId) => {
+    try {
+        // Kiểm tra order tồn tại và thuộc về user
+        const order = await OrderModel.findOne({ _id: orderId, userId })
+            .populate("userId", "user_name email phone address")
+            .populate("orderStatusId", "name description color");
+            
+        if (!order) return { status: "ERR", message: "Không tìm thấy đơn hàng hoặc bạn không có quyền xem đơn hàng này" };
+        
+        // Lấy chi tiết đơn hàng
+        const orderDetails = await OrderDetailModel.find({ orderId })
+            .populate("productId", "name images price")
+            .lean();
+            
+        const orderObj = order.toObject();
+        
+        // ✅ Convert ObjectId thành string cho orderDetails
+        const processedOrderDetails = orderDetails.map(detail => ({
+            ...detail,
+            productId: detail.productId ? detail.productId._id.toString() : null,
+            orderId: detail.orderId.toString(),
+            _id: detail._id.toString()
+        }));
+        
+        orderObj.orderDetails = processedOrderDetails;
+        
+        // ✅ Thông tin ngày có sẵn trong response:
+        // - orderDate: Ngày tạo đơn hàng (Date)
+        // - createdAt: Ngày tạo record (từ timestamps)
+        // - deliveredAt: Ngày hoàn thành đơn hàng (nếu đã giao)
+        // - cancelledAt: Ngày hủy đơn hàng (nếu bị hủy)
+        // - updatedAt: Ngày cập nhật cuối cùng
+        
+        return { status: "OK", data: orderObj };
+    } catch (error) {
+        return { status: "ERR", message: error.message };
+    }
+};
+
+// ✅ Customer: Lấy lịch sử đơn hàng của khách hàng với phân trang, filter và sort theo thời gian tạo
 const getOrderHistory = async (userId, query = {}) => {
     try {
+        // Validation userId bắt buộc cho customer
+        if (!userId) {
+            return { status: "ERR", message: "Thiếu userId" };
+        }
+        
+        // Kiểm tra user tồn tại
+        const user = await UserModel.findById(userId);
+        if (!user) return { status: "ERR", message: "Không tìm thấy người dùng" };
+        
         // Validation và chuẩn hóa page, limit
         let page = Math.max(1, parseInt(query.page) || 1);
         let limit = Math.min(Math.max(1, parseInt(query.limit) || 10), 100); // Mặc định 10 items/trang
         
-        const filter = {};
+        const filter = { userId }; // Chỉ lấy đơn hàng của customer này
         
-        // Filter theo userId nếu có (không bắt buộc)
-        if (userId) {
-            // Kiểm tra user tồn tại nếu có userId
-            const user = await UserModel.findById(userId);
-            if (!user) return { status: "ERR", message: "Không tìm thấy người dùng" };
-            filter.userId = userId;
-        }
-        
-        // 🔍 Search theo tên khách hàng (receiverName)
+        // 🔍 Search theo mã đơn hàng (orderId/orderNumber) hoặc tên khách hàng (receiverName)
+        // Hỗ trợ tìm kiếm một phần chuỗi, không phân biệt hoa thường
         if (query.search) {
-            filter.receiverName = { $regex: query.search, $options: 'i' };
+            const searchTerm = query.search.trim();
+            
+            // Escape các ký tự đặc biệt trong regex để tránh lỗi
+            const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            
+            // Kiểm tra xem search term có phải là ObjectId hợp lệ không
+            const isValidObjectId = mongoose.Types.ObjectId.isValid(searchTerm);
+            
+            const searchConditions = [];
+            
+            // Search theo orderNumber (mã đơn hàng như ORD202501160001) - tìm một phần chuỗi
+            searchConditions.push({ orderNumber: { $regex: escapedSearchTerm, $options: 'i' } });
+            
+            // Search theo _id: 
+            // - Nếu là ObjectId hợp lệ thì tìm chính xác
+            // - Nếu không, tìm một phần của ObjectId (convert _id sang string)
+            if (isValidObjectId) {
+                searchConditions.push({ _id: new mongoose.Types.ObjectId(searchTerm) });
+            } else {
+                // Tìm một phần của ObjectId bằng cách convert _id sang string
+                searchConditions.push({
+                    $expr: {
+                        $regexMatch: {
+                            input: { $toString: "$_id" },
+                            regex: escapedSearchTerm,
+                            options: "i"
+                        }
+                    }
+                });
+            }
+            
+            // Search theo tên khách hàng (receiverName) - tìm một phần chuỗi
+            searchConditions.push({ receiverName: { $regex: escapedSearchTerm, $options: 'i' } });
+            
+            // Sử dụng $or để tìm kiếm theo bất kỳ điều kiện nào
+            filter.$or = searchConditions;
         }
         
         // Filter theo orderStatusId nếu có
@@ -509,13 +644,23 @@ const getOrderHistory = async (userId, query = {}) => {
     }
 };
 
+// ============================================
+// 📦 EXPORTS
+// ============================================
+
 module.exports = {
+    // Shared Functions
     createOrder,
-    getOrders,
-    getOrderById,
-    updateOrderStatus,
-    getOrderStats,
     getOrderStatuses,
-    getNextValidStatuses,
-    getOrderHistory,
+    
+    // Admin Functions
+    getOrders,                  // ✅ Admin: Pagination, sort, filter, search orders
+    getOrderById,              // ✅ Admin: Read details orders
+    updateOrderStatus,         // ✅ Admin: Update order status
+    getOrderStats,            // ✅ Admin: Order statistics
+    getNextValidStatuses,     // ✅ Admin: Get next valid statuses
+    
+    // Customer Functions
+    getOrderHistory,          // ✅ Customer: View order history with pagination, sort, filter, search
+    getOrderByIdForCustomer,  // ✅ Customer: Read details orders (only their own orders)
 };
