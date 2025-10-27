@@ -62,6 +62,18 @@ const getOrderStatuses = async (req, res) => {
     }
 };
 
+// 🆕 Lấy danh sách trạng thái tiếp theo hợp lệ
+const getNextValidStatuses = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const result = await OrderService.getNextValidStatuses(orderId);
+        const statusCode = result.status === "OK" ? 200 : 400;
+        return res.status(statusCode).json(result);
+    } catch (error) {
+        return res.status(500).json({ status: "ERR", message: error.message });
+    }
+};
+
 // 🆕 Lấy lịch sử đơn hàng của khách hàng
 const getOrderHistory = async (req, res) => {
     try {
@@ -81,5 +93,6 @@ module.exports = {
     updateOrderStatus,
     getOrderStats,
     getOrderStatuses,
+    getNextValidStatuses,
     getOrderHistory,
 };

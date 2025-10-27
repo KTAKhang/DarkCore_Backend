@@ -7,6 +7,7 @@ const FavoriteRouter = require("./FavoriteRouter");
 
 const routes = (app) => {
 
+    
     // Routes cho Admin/Staff (CRUD operations)
     app.use("/api", CategoryRouter);
     app.use("/api", ProductRouter);
