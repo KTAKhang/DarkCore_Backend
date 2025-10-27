@@ -1,5 +1,9 @@
 const OrderService = require("../services/OrderService");
 
+// ============================================
+// 🔄 SHARED CONTROLLERS
+// ============================================
+
 const createOrder = async (req, res) => {
     try {
         const result = await OrderService.createOrder(req.body);
@@ -9,6 +13,10 @@ const createOrder = async (req, res) => {
         return res.status(500).json({ status: "ERR", message: error.message });
     }
 };
+
+// ============================================
+// 👨‍💼 ADMIN CONTROLLERS
+// ============================================
 
 const getOrders = async (req, res) => {
     try {
@@ -74,7 +82,29 @@ const getNextValidStatuses = async (req, res) => {
     }
 };
 
-// 🆕 Lấy lịch sử đơn hàng của khách hàng
+// ============================================
+// 👤 CUSTOMER CONTROLLERS
+// ============================================
+
+// ✅ Customer: Lấy chi tiết đơn hàng theo ID (chỉ xem được đơn hàng của chính họ)
+const getOrderByIdForCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user?.id || req.body?.userId; // Lấy userId từ token hoặc body
+        
+        if (!userId) {
+            return res.status(400).json({ status: "ERR", message: "Thiếu userId" });
+        }
+        
+        const result = await OrderService.getOrderByIdForCustomer(id, userId);
+        const statusCode = result.status === "OK" ? 200 : 400;
+        return res.status(statusCode).json(result);
+    } catch (error) {
+        return res.status(500).json({ status: "ERR", message: error.message });
+    }
+};
+
+// ✅ Customer: Lấy lịch sử đơn hàng của khách hàng
 const getOrderHistory = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -86,13 +116,23 @@ const getOrderHistory = async (req, res) => {
     }
 };
 
+// ============================================
+// 📦 EXPORTS
+// ============================================
+
 module.exports = {
+    // Shared Controllers
     createOrder,
-    getOrders,
-    getOrderById,
-    updateOrderStatus,
-    getOrderStats,
     getOrderStatuses,
-    getNextValidStatuses,
-    getOrderHistory,
+    
+    // Admin Controllers
+    getOrders,                  // ✅ Admin: Pagination, sort, filter, search orders
+    getOrderById,              // ✅ Admin: Read details orders
+    updateOrderStatus,         // ✅ Admin: Update order status
+    getOrderStats,            // ✅ Admin: Order statistics
+    getNextValidStatuses,     // ✅ Admin: Get next valid statuses
+    
+    // Customer Controllers
+    getOrderHistory,          // ✅ Customer: View order history with pagination, sort, filter, search
+    getOrderByIdForCustomer,  // ✅ Customer: Read details orders (only their own orders)
 };
