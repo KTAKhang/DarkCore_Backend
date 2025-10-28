@@ -11,9 +11,10 @@ import {
   profileProxy,
   customerProxy,
   cartProxy,
+  aboutProxy,
   newsProxy,
   orderProxy,
-  favoriteProxy, // ✅ Thêm import
+  favoriteProxy,
   repairProxy
 } from "./routers/proxyRoutes.js";
 
@@ -27,7 +28,6 @@ const PORT = process.env.PORT || 3000;
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 app.use(
-
   cors({
     origin: FRONTEND_URL,
     credentials: true,
@@ -56,6 +56,11 @@ app.use(morgan("dev"));
 app.use("/auth", authProxy);
 app.use("/cataloghome", cataloghomeProxy);
 
+// About Service - Mixed routes (public + admin)
+// Public routes: /about/about, /about/founders, /about/founders/:id
+// Admin routes: /about/admin/* (About Service tự xử lý auth)
+app.use("/about", aboutProxy);
+
 // ✅ Favorite routes (require JWT) - ĐẶT TRƯỚC để match specific route
 app.use("/api/favorites", gatewayAuth, favoriteProxy);
 
@@ -70,9 +75,9 @@ app.use("/cart", gatewayAuth, cartProxy);
 app.use("/profile", gatewayAuth, profileProxy);
 app.use("/customer", gatewayAuth, customerProxy);
 
-
 // Repair service (require JWT for all routes; can relax per need)
 app.use("/repair", gatewayAuth, repairProxy);
+
 // Order service (require JWT)
 app.use("/order", gatewayAuth, orderProxy);
 
@@ -84,7 +89,6 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => {
-
   console.log(`✅ API Gateway running at http://localhost:${PORT}`);
   console.log(
     `🔧 Targets → 
@@ -92,10 +96,11 @@ app.listen(PORT, () => {
     STAFF: ${process.env.STAFF_SERVICE_URL || "http://localhost:3003"}
     CATALOG: ${process.env.CATALOG_SERVICE_URL || "http://localhost:3002"}
     CATALOGHOME: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"}
-    FAVORITE: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"} ✅
+    CART: ${process.env.CART_SERVICE_URL || "http://localhost:3005"}
+    ABOUT: ${process.env.ABOUT_SERVICE_URL || "http://localhost:3006"} ✅
+    FAVORITE: ${process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004"}
     NEWS: ${process.env.NEWS_SERVICE_URL || "http://localhost:3008"}
     ORDER: ${process.env.ORDER_SERVICE_URL || "http://localhost:3010"}
-    REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost4006"`
+    REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost:4006"}`
   );
 });
-

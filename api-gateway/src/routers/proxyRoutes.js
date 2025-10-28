@@ -65,6 +65,29 @@ export const cartProxy = createProxyMiddleware("/cart", {
   pathRewrite: { "^/cart": "" },
 });
 
+// About Service Proxy (Thông tin About Us và Founders)
+export const aboutProxy = createProxyMiddleware("/about", {
+  target: process.env.ABOUT_SERVICE_URL || "http://localhost:3006",
+  changeOrigin: true,
+  pathRewrite: { "^/about": "" },
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("About service unavailable");
+  },
+});
+
 export const newsProxy = createProxyMiddleware("/news", {
   target: process.env.NEWS_SERVICE_URL || "http://localhost:3008",
   changeOrigin: true,
@@ -116,10 +139,9 @@ export const favoriteProxy = createProxyMiddleware("/api/favorites", {
 
 // Repair Service
 export const repairProxy = createProxyMiddleware("/repair", {
-    target: process.env.REPAIR_SERVICE_URL || "http://localhost:4006",
-    changeOrigin: true,
-    pathRewrite: { "^/repair": "" },
+  target: process.env.REPAIR_SERVICE_URL || "http://localhost:4006",
+  changeOrigin: true,
+  pathRewrite: { "^/repair": "" },
 });
 
 export default router;
-

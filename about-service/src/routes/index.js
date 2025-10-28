@@ -1,15 +1,17 @@
+// ============================================
+// 📦 ABOUT SERVICE ROUTES
+// ============================================
+// About Service chỉ xử lý thông tin About Us và Founders
 
-// const CategoryRouter = require("./CategoryRouter");
-// const ProductRouter = require("./ProductRouter");
-const OrderRouter = require("./OrderRouter");
+const AboutRouter = require("./AboutRouter");
+const FounderRouter = require("./FounderRouter");
 
 const routes = (app) => {
-    // ❌ Category & Product nên thuộc Catalog Service, không phải Order Service
-    // app.use("/", CategoryRouter);
-    // app.use("/", ProductRouter);
+    // About Service routes - Thông tin cửa hàng
+    app.use("/", AboutRouter);
     
-    // ✅ Order Service chỉ xử lý Orders
-    app.use("/", OrderRouter);
+    // Founder routes - Thông tin CEO/Founders
+    app.use("/", FounderRouter);
 };
 
 module.exports = routes;

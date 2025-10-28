@@ -5,21 +5,21 @@ const options = {
     definition: {
         openapi: "3.0.0",
         info: {
-            title: "PROJECT API",
+            title: "About Service API",
             version: "1.0.0",
-            description: "Functional Specifications for ToysShop Request API",
+            description: "API Documentation for DarkCore About Service - Quản lý thông tin About Us và Founders",
         },
         servers: [
             {
-                url: "http://localhost:3010",
+                url: "http://localhost:3005",
                 description: "Local Development Server"
             },
             {
-                url: "http://localhost:3000/order",
+                url: "http://localhost:3000/about",
                 description: "Via API Gateway (Local)"
             },
             {
-                url: "https://youtube-fullstack-nodejs-forbeginer.onrender.com/order",
+                url: "https://your-production-url.com/about",
                 description: "Production Server"
             },
         ],
