@@ -51,6 +51,17 @@ export const customerProxy = createProxyMiddleware("/customer", {
   changeOrigin: true,
   pathRewrite: { "^/customer": "" },
 });
+export const productReviewProxy = createProxyMiddleware("/review", {
+  target: process.env.USER_SERVICE_URL || "http://localhost:3030",
+  changeOrigin: true,
+  pathRewrite: { "^/review": "" },
+});
+
+export const productReviewGuestProxy = createProxyMiddleware("/review-guest", {
+  target: process.env.USER_SERVICE_URL || "http://localhost:3030",
+  changeOrigin: true,
+  pathRewrite: { "^/review-guest": "" },
+});
 
 // Catalog Home Service
 export const cataloghomeProxy = createProxyMiddleware("/cataloghome", {
@@ -64,6 +75,7 @@ export const cartProxy = createProxyMiddleware("/cart", {
   changeOrigin: true,
   pathRewrite: { "^/cart": "" },
 });
+
 
 // About Service Proxy (Thông tin About Us và Founders)
 export const aboutProxy = createProxyMiddleware("/about", {
@@ -88,12 +100,23 @@ export const aboutProxy = createProxyMiddleware("/about", {
   },
 });
 
+
+export const paymentProxy = createProxyMiddleware("/news", {
+  target: process.env.NEWS_SERVICE_URL || "http://localhost:3007",
+  changeOrigin: true,
+  pathRewrite: { "^/payment": "" },
+});
+
 export const newsProxy = createProxyMiddleware("/news", {
   target: process.env.NEWS_SERVICE_URL || "http://localhost:3008",
   changeOrigin: true,
   pathRewrite: { "^/news": "" },
 });
-
+export const contactProxy = createProxyMiddleware("/contacts", {
+  target: process.env.CONTACT_SERVICE_URL || "http://localhost:3020",
+  changeOrigin: true,
+  pathRewrite: { "^/contacts": "/contacts" },
+});
 // Order Service Proxy
 export const orderProxy = createProxyMiddleware("/order", {
   target: process.env.ORDER_SERVICE_URL || "http://localhost:3010",
@@ -111,6 +134,34 @@ export const orderProxy = createProxyMiddleware("/order", {
   },
   onError: function (err, req, res) {
     res.status(500).send("Order service unavailable");
+  },
+});
+
+// Discount Service Proxy
+export const discountProxy = createProxyMiddleware("/discount", {
+  target: process.env.DISCOUNT_SERVICE_URL || "http://localhost:4009",
+  changeOrigin: true,
+  // Map gateway prefix /discount -> service /api
+  pathRewrite: { "^/discount": "/api" },
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Discount service unavailable");
   },
 });
 
@@ -143,5 +194,6 @@ export const repairProxy = createProxyMiddleware("/repair", {
   changeOrigin: true,
   pathRewrite: { "^/repair": "" },
 });
+console.log("CART_SERVICE_URL =", process.env.CART_SERVICE_URL);
 
 export default router;

@@ -31,7 +31,8 @@ const updateUserStatus = async (id, status) => {
             data: dataOutput,
         };
     } catch (error) {
-        return { status: "ERR", message: error.message };
+        console.error("Lỗi cập nhật trạng thái người dùng:", error);
+        return { status: "ERR", message: "Đã xảy ra lỗi khi cập nhật trạng thái tài khoản!" };
     }
 };
 
@@ -48,7 +49,6 @@ const getAllUser = (page, limit, search = "", filters = {}, sortOption = "desc")
                     { email: { $regex: search, $options: "i" } },
                 ];
 
-                // Nếu search trùng với _id hợp lệ thì thêm vào query
                 if (mongoose.Types.ObjectId.isValid(search)) {
                     orConditions.push({ _id: new mongoose.Types.ObjectId(search) });
                 }

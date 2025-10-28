@@ -1,61 +1,78 @@
-const News = require("../model/NewsModel");
+const News = require("../model/NewsModel"); 
 const mongoose = require("mongoose");
-const User = require("../model/UserModel");
-const cloudinary = require("../config/cloudinaryConfig");
+const User = require("../model/UserModel"); 
+const cloudinary = require("../config/cloudinaryConfig"); 
 
-// Tạo news mới
+// Tạo tin tức mới
 const createNews = async (data) => {
   try {
-    // FIX: Handle tags string → array
+    // Xử lý tags: chuyển từ chuỗi sang mảng nếu là chuỗi
     if (data.tags && typeof data.tags === "string") {
       data.tags = data.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean);
+        .split(",") // Tách chuỗi tags bằng dấu phẩy
+        .map((tag) => tag.trim()) // Loại bỏ khoảng trắng
+        .filter(Boolean); // Lọc bỏ các giá trị rỗng
     }
 
+    // Kiểm tra thông tin tác giả bắt buộc
     if (!data.author || !data.author.id || !data.author.name) {
-      throw new Error("Author required: {id, name}");
+      throw new Error("Author required: {id, name}"); // Ném lỗi nếu thiếu thông tin tác giả
     }
 
+    // Kiểm tra trùng tiêu đề
+    const existing = await News.findOne({ title: data.title.trim() });
+    if (existing) {
+      const err = new Error("Tiêu đề tin tức đã tồn tại!");
+      err.statusCode = 400; // Gán mã lỗi 400
+      throw err;
+    }
+
+    // Chuyển đổi author.id thành ObjectId nếu là chuỗi
     if (typeof data.author.id === "string") {
       data.author.id = new mongoose.Types.ObjectId(data.author.id);
     }
 
+    // Tạo instance News mới và lưu vào DB
     const news = new News(data);
     const saved = await news.save();
-    return saved;
+    return saved; // Trả về tin tức đã lưu
   } catch (err) {
-    console.error("CreateNews service error:", err);
-    throw err;
+    // Xử lý lỗi trùng key (Mongo duplicate key error)
+    if (err.code === 11000) {
+      err.message = "Tiêu đề tin tức đã tồn tại!";
+      err.statusCode = 400;
+    }
+    console.error("CreateNews service error:", err); // Ghi log lỗi
+    throw err; // Ném lỗi để xử lý ở tầng trên
   }
 };
 
-// Lấy news theo ID (public: chỉ published) - SỬA: Không increment ở service nữa, di chuyển logic lên controller
+// Lấy tin tức theo ID (chỉ lấy tin published)
 const getNewsById = async (id) => {
   try {
-    // THÊM: Chỉ fetch published news (giữ nguyên logic public)
+    // Tìm tin tức theo ID và trạng thái published, populate thông tin tác giả
     return await News.findOne({ _id: id, status: "published" }).populate(
       "author.id",
       "name email"
-    );
+    ); // Chỉ lấy name và email của tác giả
   } catch (err) {
-    console.error("GetById service error:", err);
-    throw err;
+    console.error("GetById service error:", err); // Ghi log lỗi
+    throw err; // Ném lỗi để xử lý ở tầng trên
   }
 };
 
-// Cập nhật news theo ID
+// Cập nhật tin tức theo ID
 const updateNews = async (id, payload) => {
   try {
-    // FIX: Handle tags string → array
+    // Xử lý tags: chuyển từ chuỗi sang mảng nếu là chuỗi
     if (payload.tags && typeof payload.tags === "string") {
       payload.tags = payload.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean);
+        .split(",") // Tách chuỗi tags bằng dấu phẩy
+        .map((tag) => tag.trim()) // Loại bỏ khoảng trắng
+        .filter(Boolean); // Lọc bỏ các giá trị rỗng
     }
 
+    // Chuyển đổi author.id thành ObjectId nếu là chuỗi
     if (
       payload.author &&
       payload.author.id &&
@@ -66,49 +83,53 @@ const updateNews = async (id, payload) => {
 
     // Nếu có ảnh mới, xóa ảnh cũ trên Cloudinary
     if (payload.image) {
-      const existing = await News.findById(id).select("imagePublicId");
+      const existing = await News.findById(id).select("imagePublicId"); // Lấy imagePublicId của tin tức
       if (existing && existing.imagePublicId) {
         try {
-          await cloudinary.uploader.destroy(existing.imagePublicId);
+          await cloudinary.uploader.destroy(existing.imagePublicId); // Xóa ảnh cũ trên Cloudinary
         } catch (e) {
-          console.warn("Failed to delete old news image:", e.message);
+          console.warn("Failed to delete old news image:", e.message); // Ghi log cảnh báo nếu xóa ảnh thất bại
         }
       }
     }
 
+    // Cập nhật tin tức theo ID với dữ liệu mới
     const updated = await News.findByIdAndUpdate(id, payload, {
-      new: true,
-      runValidators: true,
-    }).populate("author.id", "name email");
+      new: true, // Trả về bản ghi đã cập nhật
+      runValidators: true, // Chạy các validator của schema
+    }).populate("author.id", "name email"); // Populate thông tin tác giả
 
+    // Kiểm tra nếu không tìm thấy tin tức
     if (!updated) throw new Error("News not found");
-    return updated;
+    return updated; // Trả về tin tức đã cập nhật
   } catch (err) {
-    console.error("UpdateNews service error:", err);
-    throw err;
+    console.error("UpdateNews service error:", err); // Ghi log lỗi
+    throw err; // Ném lỗi để xử lý ở tầng trên
   }
 };
 
-// Xóa news theo ID (soft delete)
+// Xóa tin tức theo ID (soft delete)
 const deleteNews = async (id) => {
   try {
+    // Soft delete: cập nhật trạng thái thành archived và thêm deletedAt
     const deleted = await News.findByIdAndUpdate(
       id,
       {
         status: "archived",
         deletedAt: new Date(),
       },
-      { new: true }
+      { new: true } // Trả về bản ghi đã cập nhật
     );
+    // Kiểm tra nếu không tìm thấy tin tức
     if (!deleted) throw new Error("News not found");
-    return deleted;
+    return deleted; // Trả về tin tức đã xóa (archived)
   } catch (err) {
-    console.error("DeleteNews service error:", err);
-    throw err;
+    console.error("DeleteNews service error:", err); // Ghi log lỗi
+    throw err; // Ném lỗi để xử lý ở tầng trên
   }
 };
 
-// Lấy danh sách news với filter/search/sort/pagination
+// Lấy danh sách tin tức với filter, search, sort, và pagination
 const listNews = async ({
   q,
   author,
@@ -120,30 +141,56 @@ const listNews = async ({
   limit = 10,
 }) => {
   try {
+
     const filter = { ...(status && { status }) };
-    if (q) filter.$text = { $search: q };
+    // if (q) filter.$text = { $search: q };  //by cluster
+    if (q) {
+      let regex;
+
+      // Nếu người dùng chỉ nhập 1 ký tự -> tìm từ bắt đầu bằng chữ đó
+      if (q.length === 1) {
+        regex = new RegExp(`\\b${q}`, 'i');
+      } else {
+        // Nếu nhập nhiều hơn 1 ký tự -> tìm theo cụm
+        regex = new RegExp(q, 'i');
+      }
+
+      filter.$or = [
+        { title: regex },
+        { summary: regex },
+        { content: regex },
+        { tags: { $elemMatch: { $regex: regex } } },
+      ];
+    }
     if (author) filter["author.name"] = new RegExp(author, "i");
     if (tags) filter.tags = { $in: tags.split(",").map((t) => t.trim()) };
 
-    const sort = {};
-    sort[sortBy] = order === "asc" ? 1 : -1;
 
+    // Tạo object sort
+    const sort = {};
+    sort[sortBy] = order === "asc" ? 1 : -1; // Sắp xếp theo sortBy và order (asc/desc)
+
+    // Tính số lượng bản ghi cần bỏ qua (skip) cho pagination
     const skip = (Math.max(1, page) - 1) * Math.max(1, limit);
 
+    // Tìm danh sách tin tức theo filter, sort, skip, và limit
     let data = await News.find(filter).sort(sort).skip(skip).limit(limit);
 
+    // Populate thông tin tác giả
     try {
       data = await News.populate(data, {
         path: "author.id",
         select: "name email",
         model: User,
-      });
+      }); // Populate name và email của tác giả
     } catch (populateErr) {
-      console.warn("Populate author failed:", populateErr.message);
+      console.warn("Populate author failed:", populateErr.message); // Ghi log cảnh báo nếu populate thất bại
     }
 
+    // Đếm tổng số bản ghi thỏa mãn filter
     const total = await News.countDocuments(filter);
 
+    // Trả về kết quả với dữ liệu, tổng số bản ghi, trang hiện tại, và số trang
     return {
       data,
       total,
@@ -151,39 +198,40 @@ const listNews = async ({
       pages: Math.ceil(total / limit),
     };
   } catch (err) {
-    console.error("ListNews service error:", err);
-    throw err;
+    console.error("ListNews service error:", err); // Ghi log lỗi
+    throw err; // Ném lỗi để xử lý ở tầng trên
   }
 };
 
-// THÊM: Lấy thống kê tổng (count theo status, không filter)
+// Lấy thống kê tin tức (theo status)
 const getStats = async () => {
   try {
+    // Sử dụng aggregation để tính thống kê
     const aggregationResult = await News.aggregate([
-      // Group theo status và count
+      // Group theo status và đếm số lượng
       {
         $group: {
           _id: "$status",
           count: { $sum: 1 },
         },
       },
-      // Group lại để tính total và sum có điều kiện cho từng status
+      // Group lại để tính tổng và các trạng thái cụ thể
       {
         $group: {
           _id: null,
-          total: { $sum: "$count" },
+          total: { $sum: "$count" }, // Tổng số tin tức
           published: {
-            $sum: { $cond: [{ $eq: ["$_id", "published"] }, "$count", 0] },
+            $sum: { $cond: [{ $eq: ["$_id", "published"] }, "$count", 0] }, // Đếm tin published
           },
           draft: {
-            $sum: { $cond: [{ $eq: ["$_id", "draft"] }, "$count", 0] },
+            $sum: { $cond: [{ $eq: ["$_id", "draft"] }, "$count", 0] }, // Đếm tin draft
           },
           archived: {
-            $sum: { $cond: [{ $eq: ["$_id", "archived"] }, "$count", 0] },
+            $sum: { $cond: [{ $eq: ["$_id", "archived"] }, "$count", 0] }, // Đếm tin archived
           },
         },
       },
-      // Project chỉ fields cần
+      // Chỉ lấy các trường cần thiết
       {
         $project: {
           _id: 0,
@@ -195,21 +243,22 @@ const getStats = async () => {
       },
     ]);
 
-    // Fallback nếu không có data
+    // Trả về kết quả, fallback nếu không có dữ liệu
     return (
       aggregationResult[0] || { total: 0, published: 0, draft: 0, archived: 0 }
     );
   } catch (err) {
-    console.error("GetStats service error:", err);
-    throw new Error("Không thể tải thống kê news");
+    console.error("GetStats service error:", err); // Ghi log lỗi
+    throw new Error("Không thể tải thống kê news"); // Ném lỗi với thông điệp tùy chỉnh
   }
 };
 
+// Xuất các hàm service để sử dụng ở tầng controller
 module.exports = {
-  createNews,
-  getNewsById,
-  updateNews,
-  deleteNews,
-  listNews,
-  getStats, // THÊM: Export method mới
+  createNews, 
+  getNewsById, 
+  updateNews, 
+  deleteNews, 
+  listNews, 
+  getStats, 
 };
