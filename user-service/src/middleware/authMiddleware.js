@@ -1,106 +1,58 @@
 const mongoose = require("mongoose");
-const UserModel = require("../models/UserModel");
 
-// Middleware lấy user từ header do Gateway gửi sang
-const attachUserFromHeader = async (req, res, next) => {
+const attachUserFromHeader = (req, res, next) => {
     try {
-        if (req.headers["x-user"]) {
-            const userFromHeader = JSON.parse(req.headers["x-user"]);
-
-            // Kiểm tra ObjectId hợp lệ
-            if (!mongoose.Types.ObjectId.isValid(userFromHeader._id)) {
-                return res.status(400).json({ message: "Invalid user id", status: "ERR" });
-            }
-
-            const user = await UserModel.findById(userFromHeader._id);
-
-            if (!user) {
-                return res.status(401).json({ message: "User not found", status: "ERR" });
-            }
-
-            // Check status: false = bị block
-            if (user.status === false) {
-                return res.status(403).json({ message: "Tài khoản của bạn đã bị khóa bởi admin", status: "ERR" });
-            }
-
-            // Nếu OK thì gắn user vào req
-            req.user = user;
+        const userHeader = req.headers["x-user"];
+        if (!userHeader) {
+            return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
         }
 
+        const user = JSON.parse(userHeader);
+
+        if (!mongoose.Types.ObjectId.isValid(user._id)) {
+            return res.status(400).json({ message: "User ID không hợp lệ", status: "ERR" });
+        }
+
+        if (user.status === false) {
+            return res.status(403).json({ message: "Tài khoản đã bị khóa", status: "ERR" });
+        }
+
+        req.user = user;
         next();
     } catch (err) {
         console.error("attachUserFromHeader error:", err);
-        return res.status(400).json({ message: "Invalid user header", status: "ERR" });
+        return res.status(400).json({ message: "Header user không hợp lệ", status: "ERR" });
     }
 };
 
-// Middleware chỉ cho Admin
-const authAdminMiddleware = async (req, res, next) => {
-    try {
-        if (!req.user || !mongoose.Types.ObjectId.isValid(req.user._id)) {
-            return res.status(401).json({ message: "No user data or invalid id", status: "ERR" });
-        }
-
-        const userData = await UserModel.findById(req.user._id).populate("role_id", "name");
-
-        if (!userData || userData.role_id?.name !== "admin") {
-            return res.status(403).json({ message: "Access denied", status: "ERR" });
-        }
-
-        req.user = userData;
-        next();
-    } catch (err) {
-        return res.status(500).json({ message: "Internal server error", status: "ERR" });
+const authAdminMiddleware = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ message: "Không có thông tin user", status: "ERR" });
     }
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Chỉ admin mới được truy cập", status: "ERR" });
+    }
+
+    next();
 };
 
-// Middleware cho phép user truy cập chính họ hoặc admin
-const authMiddleware = async (req, res, next) => {
-    try {
-        if (!req.user) {
-            return res.status(401).json({ message: "No user data", status: "ERR" });
-        }
-
-        const userData = await UserModel.findById(req.user._id).populate("role_id", "name");
-
-        if (userData?.role_id?.name === "admin" || req.user._id === req.params.id) {
-            req.user = userData;
-            return next();
-        }
-
-        return res.status(403).json({ message: "Access denied", status: "ERR" });
-    } catch (err) {
-        return res.status(500).json({ message: "Internal server error", status: "ERR" });
+const authCustomerMiddleware = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ message: "Không có thông tin user", status: "ERR" });
     }
+
+    if (req.user.role !== "customer") {
+        return res.status(403).json({ message: "Chỉ khách hàng mới được truy cập", status: "ERR" });
+    }
+
+    next();
 };
 
-const authUserMiddleware = async (req, res, next) => {
-    try {
-        if (!req.user) {
-            return res.status(401).json({ message: "No user data", status: "ERR" });
-        }
-        next();
-    } catch (err) {
-        return res.status(500).json({ message: "Internal server error", status: "ERR" });
-    }
+
+
+module.exports = {
+    attachUserFromHeader,
+    authAdminMiddleware,
+    authCustomerMiddleware,
 };
-
-const authCustomerMiddleware = async (req, res, next) => {
-    try {
-        if (!req.user) {
-            return res.status(401).json({ message: "No user data", status: "ERR" });
-        }
-
-        const userData = await UserModel.findById(req.user._id).populate("role_id", "name");
-
-        if (!userData || userData.role_id?.name !== "customer") {
-            return res.status(403).json({ message: "Access denied", status: "ERR" });
-        }
-
-        req.user = userData;
-        next();
-    } catch (err) {
-        return res.status(500).json({ message: "Internal server error", status: "ERR" });
-    }
-};
-module.exports = { authMiddleware, authAdminMiddleware, authUserMiddleware, attachUserFromHeader, authCustomerMiddleware };

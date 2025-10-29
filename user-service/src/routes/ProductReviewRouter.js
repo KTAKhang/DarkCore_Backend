@@ -1,7 +1,7 @@
 const express = require("express");
 const routerReview = express.Router();
 const productReviewController = require("../controller/ProductReviewController");
-const { attachUserFromHeader, authAdminMiddleware, authCustomerMiddleware, authUserMiddleware } = require("../middleware/authMiddleware");
+const { attachUserFromHeader, authAdminMiddleware, authCustomerMiddleware } = require("../middleware/authMiddleware");
 
 routerReview.use(attachUserFromHeader);
 routerReview.post("/create", authCustomerMiddleware, productReviewController.createReview);
@@ -21,7 +21,7 @@ routerReview.get(
 
 routerReview.get(
     "/order/:order_id",
-    authUserMiddleware,
+    authCustomerMiddleware,
     productReviewController.getProductReviewsByOrderId
 );
 
