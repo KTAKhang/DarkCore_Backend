@@ -6,7 +6,28 @@ const ProductModel = require("../models/ProductModel");
 
 const createOrder = async (payload) => {
     try {
-        const { userId, items, receiverName, receiverPhone, receiverAddress, paymentMethod, note } = payload;
+        // ✅ Log payload gốc từ frontend
+        console.log('📥 Received payload:', JSON.stringify(payload, null, 2));
+        
+        // ✅ Hỗ trợ cả snake_case và camelCase từ frontend
+        const userId = payload.userId || payload.user_id;
+        const items = payload.items;
+        const receiverName = payload.receiverName || payload.receiver_name || payload.receiverinfo?.name;
+        const receiverPhone = payload.receiverPhone || payload.receiver_phone || payload.receiverinfo?.phone;
+        const receiverAddress = payload.receiverAddress || payload.receiver_address || payload.receiverinfo?.address;
+        const paymentMethod = payload.paymentMethod || payload.payment_method;
+        const note = payload.note || payload.notes || "";
+        
+        // ✅ Log các field sau khi destructure
+        console.log('📋 Destructured fields:', {
+            userId,
+            receiverName,
+            receiverPhone,
+            receiverAddress,
+            paymentMethod,
+            note,
+            itemsCount: items ? items.length : 0
+        });
         
         if (!userId || !items || !receiverName || !receiverPhone || !receiverAddress) {
             return { status: "ERR", message: "Thiếu các trường bắt buộc" };
@@ -28,6 +49,15 @@ const createOrder = async (payload) => {
             const product = await ProductModel.findById(item.productId);
             if (!product) return { status: "ERR", message: `Không tìm thấy sản phẩm với ID: ${item.productId}` };
             
+            // ✅ Log để debug thông tin product và images
+            console.log('📦 Product Info:', {
+                productId: product._id,
+                productName: product.name,
+                images: product.images,
+                imagesLength: product.images ? product.images.length : 0,
+                firstImage: product.images && product.images.length > 0 ? product.images[0] : "NO IMAGE"
+            });
+            
             if (product.stockQuantity < item.quantity) {
                 return { status: "ERR", message: `Sản phẩm ${product.name} không đủ số lượng trong kho` };
             }
@@ -35,11 +65,16 @@ const createOrder = async (payload) => {
             const itemTotal = product.price * item.quantity;
             subtotal += itemTotal;
 
+            // ✅ Lấy ảnh đầu tiên từ product, nếu không có thì để rỗng
+            const productImage = product.images && product.images.length > 0 ? product.images[0] : "";
+            
+            console.log('🖼️  Product Image to be saved:', productImage);
+
             orderDetails.push({
                 orderId: null, // Sẽ được cập nhật sau khi tạo order
                 productId: product._id,
                 productName: product.name,
-                productImage: product.images && product.images.length > 0 ? product.images[0] : "",
+                productImage: productImage,
                 quantity: item.quantity,
                 price: product.price,
                 totalPrice: itemTotal,
@@ -61,8 +96,8 @@ const createOrder = async (payload) => {
             payloadTotalPrice: payload.totalPrice
         });
 
-        // Tạo order
-        const order = await OrderModel.create({
+        // ✅ Log data trước khi tạo order
+        const orderData = {
             userId,
             subtotal,
             totalPrice,
@@ -74,12 +109,26 @@ const createOrder = async (payload) => {
             receiverPhone,
             receiverAddress,
             note
-        });
+        };
+        
+        console.log('💾 Data to create Order:', JSON.stringify(orderData, null, 2));
+        
+        // Tạo order
+        const order = await OrderModel.create(orderData);
 
         // Tạo order details
+        console.log('💾 Creating OrderDetails with data:', JSON.stringify(orderDetails, null, 2));
+        
         for (const detail of orderDetails) {
             detail.orderId = order._id;
-            await OrderDetailModel.create(detail);
+            const createdDetail = await OrderDetailModel.create(detail);
+            
+            console.log('✅ OrderDetail created:', {
+                _id: createdDetail._id,
+                productName: createdDetail.productName,
+                productImage: createdDetail.productImage,
+                quantity: createdDetail.quantity
+            });
         }
 
         // Cập nhật số lượng sản phẩm trong kho
@@ -90,6 +139,15 @@ const createOrder = async (payload) => {
             );
         }
 
+        // ✅ Log order sau khi tạo
+        console.log('✅ Order created in DB:', {
+            _id: order._id,
+            receiverName: order.receiverName,
+            receiverPhone: order.receiverPhone,
+            receiverAddress: order.receiverAddress,
+            note: order.note
+        });
+        
         // Populate để trả về đầy đủ thông tin
         const populatedOrder = await OrderModel.findById(order._id)
             .populate("userId", "user_name email phone")
@@ -178,11 +236,17 @@ const getOrders = async (query = {}) => {
                     .lean(); // ✅ Thêm lean() cho orderDetails cũng
                 
                 // ✅ Convert ObjectId thành string cho productId và orderId
+                // ✅ Ưu tiên sử dụng productImage đã lưu, nếu không có thì lấy từ productId.images
                 const processedOrderDetails = orderDetails.map(detail => ({
                     ...detail,
                     productId: detail.productId ? detail.productId._id.toString() : null,
                     orderId: detail.orderId.toString(),
-                    _id: detail._id.toString()
+                    _id: detail._id.toString(),
+                    // ✅ Đảm bảo productImage luôn có giá trị (ưu tiên từ OrderDetail, fallback sang Product)
+                    productImage: detail.productImage || 
+                                 (detail.productId && detail.productId.images && detail.productId.images.length > 0 
+                                  ? detail.productId.images[0] 
+                                  : "")
                 }));
                 
                 order.orderDetails = processedOrderDetails;
@@ -229,11 +293,17 @@ const getOrderById = async (id) => {
         const orderObj = order.toObject();
         
         // ✅ Convert ObjectId thành string cho orderDetails
+        // ✅ Ưu tiên sử dụng productImage đã lưu, nếu không có thì lấy từ productId.images
         const processedOrderDetails = orderDetails.map(detail => ({
             ...detail,
             productId: detail.productId ? detail.productId._id.toString() : null,
             orderId: detail.orderId.toString(),
-            _id: detail._id.toString()
+            _id: detail._id.toString(),
+            // ✅ Đảm bảo productImage luôn có giá trị (ưu tiên từ OrderDetail, fallback sang Product)
+            productImage: detail.productImage || 
+                         (detail.productId && detail.productId.images && detail.productId.images.length > 0 
+                          ? detail.productId.images[0] 
+                          : "")
         }));
         
         orderObj.orderDetails = processedOrderDetails;
@@ -494,11 +564,17 @@ const getOrderHistory = async (userId, query = {}) => {
                     .lean();
                 
                 // Convert ObjectId thành string
+                // ✅ Ưu tiên sử dụng productImage đã lưu, nếu không có thì lấy từ productId.images
                 const processedOrderDetails = orderDetails.map(detail => ({
                     ...detail,
                     productId: detail.productId ? detail.productId._id.toString() : null,
                     orderId: detail.orderId.toString(),
-                    _id: detail._id.toString()
+                    _id: detail._id.toString(),
+                    // ✅ Đảm bảo productImage luôn có giá trị (ưu tiên từ OrderDetail, fallback sang Product)
+                    productImage: detail.productImage || 
+                                 (detail.productId && detail.productId.images && detail.productId.images.length > 0 
+                                  ? detail.productId.images[0] 
+                                  : "")
                 }));
                 
                 order.orderDetails = processedOrderDetails;
@@ -530,6 +606,45 @@ const getOrderHistory = async (userId, query = {}) => {
     }
 };
 
+// ✅ Customer: Lấy chi tiết đơn hàng theo ID (chỉ xem được đơn hàng của chính họ)
+const getOrderByIdForCustomer = async (orderId, userId) => {
+    try {
+        // Kiểm tra order tồn tại và thuộc về user
+        const order = await OrderModel.findOne({ _id: orderId, userId })
+            .populate("userId", "user_name email phone address")
+            .populate("orderStatusId", "name description color");
+            
+        if (!order) return { status: "ERR", message: "Không tìm thấy đơn hàng hoặc bạn không có quyền xem đơn hàng này" };
+        
+        // Lấy chi tiết đơn hàng
+        const orderDetails = await OrderDetailModel.find({ orderId })
+            .populate("productId", "name images price")
+            .lean();
+            
+        const orderObj = order.toObject();
+        
+        // ✅ Convert ObjectId thành string cho orderDetails
+        // ✅ Ưu tiên sử dụng productImage đã lưu, nếu không có thì lấy từ productId.images
+        const processedOrderDetails = orderDetails.map(detail => ({
+            ...detail,
+            productId: detail.productId ? detail.productId._id.toString() : null,
+            orderId: detail.orderId.toString(),
+            _id: detail._id.toString(),
+            // ✅ Đảm bảo productImage luôn có giá trị (ưu tiên từ OrderDetail, fallback sang Product)
+            productImage: detail.productImage || 
+                         (detail.productId && detail.productId.images && detail.productId.images.length > 0 
+                          ? detail.productId.images[0] 
+                          : "")
+        }));
+        
+        orderObj.orderDetails = processedOrderDetails;
+        
+        return { status: "OK", data: orderObj };
+    } catch (error) {
+        return { status: "ERR", message: error.message };
+    }
+};
+
 module.exports = {
     createOrder,
     getOrders,
@@ -540,4 +655,5 @@ module.exports = {
     getOrderStats,
     getOrderStatuses,
     getOrderHistory,
+    getOrderByIdForCustomer,
 };
