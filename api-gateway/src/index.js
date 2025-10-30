@@ -77,9 +77,9 @@ app.use("/staff", gatewayAuth, staffProxy);
 app.use("/cart", gatewayAuth, cartProxy);
 app.use("/profile", gatewayAuth, profileProxy);
 app.use("/customer", gatewayAuth, customerProxy);
-
-app.use("/review", gatewayAuth, productReviewProxy);
 app.use("/review-guest", productReviewGuestProxy);
+app.use("/review", gatewayAuth, productReviewProxy);
+
 app.use("/contacts", gatewayAuth, contactProxy);
 app.use("/repair", gatewayAuth, repairProxy);
 

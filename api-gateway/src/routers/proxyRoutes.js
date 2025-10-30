@@ -58,7 +58,7 @@ export const productReviewProxy = createProxyMiddleware("/review", {
 });
 
 export const productReviewGuestProxy = createProxyMiddleware("/review-guest", {
-  target: process.env.USER_SERVICE_URL || "http://localhost:3030",
+  target: process.env.GUEST_SERVICE_URL || "http://localhost:3213",
   changeOrigin: true,
   pathRewrite: { "^/review-guest": "" },
 });
