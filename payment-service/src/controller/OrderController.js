@@ -2,6 +2,15 @@ const OrderService = require("../service/OrderService");
 
 const createOrder = async (req, res) => {
     try {
+        // ✅ Log request body từ frontend
+        console.log('🎯 Controller - Received req.body:', JSON.stringify(req.body, null, 2));
+        console.log('🎯 Controller - Specific fields:', {
+            receiverName: req.body.receiverName,
+            receiverPhone: req.body.receiverPhone,
+            receiverAddress: req.body.receiverAddress,
+            note: req.body.note
+        });
+        
         const result = await OrderService.createOrder(req.body);
         const statusCode = result.status === "OK" ? 200 : 400;
         return res.status(statusCode).json(result);
@@ -102,6 +111,24 @@ const getOrderHistory = async (req, res) => {
     }
 };
 
+// ✅ Customer: Lấy chi tiết đơn hàng theo ID (chỉ xem được đơn hàng của chính họ)
+const getOrderByIdForCustomer = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { userId } = req.query; // Hoặc lấy từ auth middleware: req.user.id
+        
+        if (!userId) {
+            return res.status(400).json({ status: "ERR", message: "Thiếu userId" });
+        }
+        
+        const result = await OrderService.getOrderByIdForCustomer(orderId, userId);
+        const statusCode = result.status === "OK" ? 200 : 400;
+        return res.status(statusCode).json(result);
+    } catch (error) {
+        return res.status(500).json({ status: "ERR", message: error.message });
+    }
+};
+
 module.exports = {
     createOrder,
     getOrders,
@@ -112,4 +139,5 @@ module.exports = {
     getOrderStats,
     getOrderStatuses,
     getOrderHistory,
+    getOrderByIdForCustomer,
 };

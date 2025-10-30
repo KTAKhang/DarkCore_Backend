@@ -16,6 +16,9 @@ router.get("/orders/stats", authMiddleware, OrderController.getOrderStats);
 // 🆕 Lấy lịch sử đơn hàng của khách hàng - PHẢI ĐỊNH NGHĨA TRƯỚC /orders/:id
 router.get("/orders/history/:userId", authMiddleware, OrderController.getOrderHistory);
 
+// ✅ Customer: Lấy chi tiết đơn hàng theo ID (chỉ xem được đơn hàng của chính họ) - PHẢI ĐỊNH NGHĨA TRƯỚC /orders/:id
+router.get("/orders/customer/:orderId", authMiddleware, OrderController.getOrderByIdForCustomer);
+
 // Lấy chi tiết đơn hàng theo ID - PHẢI ĐỊNH NGHĨA SAU các routes cụ thể
 router.get("/orders/:id", authMiddleware, OrderController.getOrderById);
 
