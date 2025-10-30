@@ -332,6 +332,7 @@ const updateStats = async (stats) => {
 };
 
 // ✅ Admin: Xóa About Us (soft delete)
+// ✅ THAY ĐỔI BACKEND - Hard Delete
 const deleteAbout = async () => {
     try {
         const about = await AboutModel.findOne();
@@ -364,16 +365,13 @@ const deleteAbout = async () => {
             }
         }
 
-        const deleted = await AboutModel.findByIdAndUpdate(
-            about._id,
-            { status: false },
-            { new: true }
-        );
+        // ❌ THAY ĐỔI: Xóa hẳn thay vì soft delete
+        await AboutModel.findByIdAndDelete(about._id);  // ← Hard delete
 
         return { 
             status: "OK", 
-            message: "Xóa thông tin About Us thành công", 
-            data: deleted 
+            message: "Xóa thông tin About Us thành công"
+            // ❌ Không trả về data nữa vì đã xóa hẳn
         };
     } catch (error) {
         return { status: "ERR", message: error.message };
