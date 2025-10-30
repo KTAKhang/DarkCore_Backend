@@ -14,7 +14,7 @@ app.use(express.json());
 
 // Kết nối MongoDB
 mongoose
-  .connect(process.env.MONGO_URL)
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Connected to MongoDB (Cart Service)"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
