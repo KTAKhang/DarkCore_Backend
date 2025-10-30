@@ -20,8 +20,8 @@ import {
   favoriteProxy,
   repairProxy,
   productReviewProxy,
-  productReviewGuestProxy
-
+  productReviewGuestProxy,
+  paymentProxy
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -86,6 +86,7 @@ app.use("/repair", gatewayAuth, repairProxy);
 app.use("/order", gatewayAuth, orderProxy);
 app.use("/discount", gatewayAuth, discountProxy);
 app.use("/news", gatewayAuth, newsProxy);
+app.use("/payment", paymentProxy); // Payment service tự xử lý auth
 
 // Health check
 app.get("/", (req, res) => {
@@ -104,7 +105,7 @@ app.listen(PORT, () => {
     CONTACT: ${process.env.CONTACT_SERVICE_URL || "http://localhost:3020"}
     FAVORITE: ${process.env.FAVORITE_SERVICE_URL || "http://localhost:3009"}
     NEWS: ${process.env.NEWS_SERVICE_URL || "http://localhost:3008"}
-    ABOUT: ${process.env.ABOUT_SERVICE_URL || "http://localhost:3006"} ✅
+    ABOUT: ${process.env.ABOUT_SERVICE_URL || "http://localhost:3006"} 
     ORDER: ${process.env.ORDER_SERVICE_URL || "http://localhost:3010"}
     DISCOUNT: ${process.env.DISCOUNT_SERVICE_URL || "http://localhost:5005"}
     REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost:4006"}
