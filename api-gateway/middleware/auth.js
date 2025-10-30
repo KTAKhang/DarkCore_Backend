@@ -15,7 +15,7 @@ export const gatewayAuth = async (req, res, next) => {
     }
 
     try {
-        const response = await axios.get(
+        const response = await axios.post(
             `http://localhost:${process.env.PORT}/auth/verify-token`,
             { access_token: token },
             { timeout: 5000 }
