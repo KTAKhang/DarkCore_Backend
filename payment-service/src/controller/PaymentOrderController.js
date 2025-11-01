@@ -1,8 +1,10 @@
 const OrderService = require("../service/OrderService");
 
-// Tạo đơn hàng từ thanh toán
+// Tạo đơn hàng từ thanh toán (sau khi thanh toán thành công)
 const createOrderFromPayment = async (req, res) => {
     try {
+        console.log("🛒 Creating order from payment with data:", JSON.stringify(req.body, null, 2));
+        
         const { 
             userId, 
             items, 
@@ -12,7 +14,10 @@ const createOrderFromPayment = async (req, res) => {
             paymentMethod, 
             note,
             shippingFee = 0,
-            discount = 0
+            discount = 0,
+            totalPrice,
+            txnRef, // VNPay transaction reference
+            vnpayData // Optional: VNPay callback data for verification
         } = req.body;
         
         // Validation cơ bản
@@ -40,6 +45,7 @@ const createOrderFromPayment = async (req, res) => {
             }
         }
 
+        // ✅ Chuẩn bị data để tạo order
         const orderData = {
             userId,
             items,
@@ -49,13 +55,29 @@ const createOrderFromPayment = async (req, res) => {
             paymentMethod,
             note,
             shippingFee,
-            discount
+            discount,
+            totalPrice // Frontend đã tính sẵn
         };
 
+        console.log("💾 Creating order with data:", JSON.stringify(orderData, null, 2));
+
+        // Tạo order
         const result = await OrderService.createOrder(orderData);
+        
+        if (result.status === "OK") {
+            console.log("✅ Order created successfully:", result.data._id);
+            
+            // ✅ Nếu thanh toán VNPay thành công, cập nhật paymentStatus
+            if (paymentMethod === "vnpay" && vnpayData && vnpayData.vnp_ResponseCode === "00") {
+                // Có thể cập nhật thêm transactionId từ VNPay
+                console.log("💳 Updating payment status for order:", result.data._id);
+            }
+        }
+
         const statusCode = result.status === "OK" ? 201 : 400;
         return res.status(statusCode).json(result);
     } catch (error) {
+        console.error("❌ Error creating order from payment:", error);
         return res.status(500).json({ status: "ERR", message: error.message });
     }
 };

@@ -107,10 +107,29 @@ export const aboutProxy = createProxyMiddleware("/about", {
 });
 
 
-export const paymentProxy = createProxyMiddleware("/news", {
-  target: process.env.NEWS_SERVICE_URL || "http://localhost:3007",
+export const paymentProxy = createProxyMiddleware("/payment", {
+  target: process.env.PAYMENT_SERVICE_URL || "http://localhost:3007",
   changeOrigin: true,
-  pathRewrite: { "^/payment": "" },
+  pathRewrite: { "^/payment": "/api/payment" },
+  onProxyReq: function (proxyReq, req, res) {
+    console.log('🔍 Payment Proxy - Request:', req.method, req.url);
+    console.log('🔍 Payment Proxy - Headers:', req.headers.authorization ? 'Has token' : 'No token');
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    console.log('🔍 Payment Proxy - Forwarding to:', process.env.PAYMENT_SERVICE_URL || "http://localhost:3007");
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Payment service unavailable");
+  },
 });
 
 export const newsProxy = createProxyMiddleware("/news", {
