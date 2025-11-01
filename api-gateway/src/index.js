@@ -21,7 +21,9 @@ import {
   repairProxy,
   productReviewProxy,
   productReviewGuestProxy,
+  saleStaffOrderProxy
   paymentProxy
+
 } from "./routers/proxyRoutes.js";
 
 import { gatewayAuth } from "../middleware/auth.js";
@@ -79,7 +81,7 @@ app.use("/profile", gatewayAuth, profileProxy);
 app.use("/customer", gatewayAuth, customerProxy);
 app.use("/review-guest", productReviewGuestProxy);
 app.use("/review", gatewayAuth, productReviewProxy);
-
+app.use("/sale-staff", gatewayAuth, saleStaffOrderProxy);
 app.use("/contacts", gatewayAuth, contactProxy);
 app.use("/repair", gatewayAuth, repairProxy);
 
