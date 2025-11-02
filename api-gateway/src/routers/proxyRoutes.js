@@ -117,6 +117,12 @@ export const contactProxy = createProxyMiddleware("/contacts", {
   changeOrigin: true,
   pathRewrite: { "^/contacts": "/contacts" },
 });
+// Product Service Proxy For Staff
+export const productProxy = createProxyMiddleware("/product", {
+  target: process.env.PRODUCT_SERVICE_URL || "http://localhost:3123",
+  changeOrigin: true,
+  pathRewrite: { "^/product": "/product" },
+});
 // Order Service Proxy
 export const orderProxy = createProxyMiddleware("/order", {
   target: process.env.ORDER_SERVICE_URL || "http://localhost:3010",

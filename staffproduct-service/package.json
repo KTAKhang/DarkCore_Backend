@@ -1,0 +1,40 @@
+{
+  "name": "staffproduct-service",
+  "version": "1.0.0",
+  "description": "Staff Product Service for handling user tickets and replies",
+  "main": "server.js",
+  "scripts": {
+    "3001": "nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "keywords": [
+    "nodejs",
+    "contact",
+    "ticket",
+    "api"
+  ],
+  "author": "KTAKhang",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KTAKhang/Youtube_FullStack_Nodejs_ForBeginer"
+  },
+  "dependencies": {
+    "cloudinary": "^2.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
+    "express-validator": "^7.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.2",
+    "morgan": "^1.10.1",
+    "multer": "^1.4.5-lts.1",
+    "nodemon": "^3.1.10",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^11.1.0"
+  }
+}
