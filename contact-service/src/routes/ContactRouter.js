@@ -5,13 +5,6 @@ const contactController = require("../controller/ContactController");
 const { uploadContactAttachments } = require("../middleware/uploadContactAttachments");
 const { uploadContactImage } = require("../middleware/uploadContactImage");
 const {
-  validateContact,
-  validateReply,
-  validateStatusUpdate,
-  validateContactId,
-  validateListQuery,
-} = require("../middleware/validateContact");
-const {
   attachUserFromHeader,
   authRoleMiddleware,
   checkOwnership,

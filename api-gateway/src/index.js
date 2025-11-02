@@ -14,7 +14,7 @@ import {
   aboutProxy,
   newsProxy,
   orderProxy,
-
+  productProxy,
   contactProxy,
   discountProxy,
   favoriteProxy,
@@ -62,7 +62,8 @@ app.use(morgan("dev"));
 // --- Public routes ---
 app.use("/auth", authProxy);
 app.use("/cataloghome", cataloghomeProxy);
-
+// Product Service Proxy For Staff
+app.use("/product", productProxy);
 
 // About Service - Mixed routes (public + admin)
 // Public routes: /about/about, /about/founders, /about/founders/:id
@@ -113,6 +114,7 @@ app.listen(PORT, () => {
     REPAIR: ${process.env.REPAIR_SERVICE_URL || "http://localhost:4006"}
     CART: ${process.env.CART_SERVICE_URL || "http://localhost:3005"}
     PAYMENT: ${process.env.PAYMENT_SERVICE_URL || "http://localhost:3007"}
+    PRODUCT FOR STAFF : ${process.env.PRODUCT_SERVICE_URL || "http://localhost:3123"}
   `);
 });
 
