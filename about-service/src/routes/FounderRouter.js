@@ -4,16 +4,24 @@ const { uploadFounderAvatar } = require("../middleware/uploadMiddleware");
 
 const router = express.Router();
 
-// Lấy danh sách Founders (Public)
+// ============================================
+// 🔄 PUBLIC ROUTES
+// ============================================
+
+// Lấy danh sách Founders (Public) - Có pagination: ?page=1&limit=10
 router.get("/founders", FounderController.getFounders);
 
 // Lấy chi tiết Founder theo ID (Public)
 router.get("/founders/:id", FounderController.getFounderById);
 
+// ============================================
+// 👨‍💼 ADMIN ROUTES
+// ============================================
+
 // Tạo Founder mới (Admin) - với upload avatar
 router.post("/admin/founders", uploadFounderAvatar, FounderController.createFounder);
 
-// Lấy tất cả Founders cho Admin (bao gồm inactive)
+// Lấy tất cả Founders cho Admin - Có search, filter, pagination: ?search=name&status=true&page=1&limit=3
 router.get("/admin/founders", FounderController.getAllFoundersForAdmin);
 
 // Lấy chi tiết Founder theo ID cho Admin
@@ -25,11 +33,8 @@ router.put("/admin/founders/:id", uploadFounderAvatar, FounderController.updateF
 // Cập nhật thứ tự hiển thị
 router.put("/admin/founders/:id/sort-order", FounderController.updateSortOrder);
 
-// Xóa Founder (soft delete)
-router.delete("/admin/founders/:id", FounderController.deleteFounder);
-
-// Xóa vĩnh viễn Founder
-router.delete("/admin/founders/:id/permanent", FounderController.permanentDeleteFounder);
+// Xóa Founder vĩnh viễn
+router.delete("/admin/founders/:id", FounderController.permanentDeleteFounder);
 
 module.exports = router;
 
