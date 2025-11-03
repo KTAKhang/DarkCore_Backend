@@ -6,7 +6,7 @@ const FounderService = require("../services/FounderService");
 
 const getFounders = async (req, res) => {
     try {
-        const result = await FounderService.getFounders();
+        const result = await FounderService.getFounders(req.query);
         const statusCode = result.status === "OK" ? 200 : 400;
         return res.status(statusCode).json(result);
     } catch (error) {
@@ -83,17 +83,6 @@ const updateSortOrder = async (req, res) => {
     }
 };
 
-const deleteFounder = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const result = await FounderService.deleteFounder(id);
-        const statusCode = result.status === "OK" ? 200 : 400;
-        return res.status(statusCode).json(result);
-    } catch (error) {
-        return res.status(500).json({ status: "ERR", message: error.message });
-    }
-};
-
 const permanentDeleteFounder = async (req, res) => {
     try {
         const { id } = req.params;
@@ -111,16 +100,15 @@ const permanentDeleteFounder = async (req, res) => {
 
 module.exports = {
     // Shared Controllers
-    getFounders,                // ✅ Public: Lấy danh sách Founders
+    getFounders,                // ✅ Public: Lấy danh sách Founders (có pagination)
     getFounderById,             // ✅ Public: Lấy chi tiết Founder theo ID
     
     // Admin Controllers
     createFounder,              // ✅ Admin: Tạo Founder mới
-    getAllFoundersForAdmin,     // ✅ Admin: Lấy tất cả Founders (bao gồm ẩn)
+    getAllFoundersForAdmin,     // ✅ Admin: Lấy tất cả Founders (có search, pagination)
     getFounderByIdForAdmin,     // ✅ Admin: Lấy chi tiết Founder (bao gồm ẩn)
     updateFounder,              // ✅ Admin: Cập nhật Founder
     updateSortOrder,            // ✅ Admin: Cập nhật thứ tự hiển thị
-    deleteFounder,              // ✅ Admin: Ẩn Founder
     permanentDeleteFounder      // ✅ Admin: Xóa vĩnh viễn Founder
 };
 
