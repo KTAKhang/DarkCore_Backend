@@ -20,9 +20,11 @@ import {
   favoriteProxy,
   repairProxy,
   productReviewProxy,
+  statisticsProxy,
   productReviewGuestProxy,
-  saleStaffOrderProxy
+  saleStaffOrderProxy,
   paymentProxy
+
 
 } from "./routers/proxyRoutes.js";
 
@@ -89,6 +91,7 @@ app.use("/repair", gatewayAuth, repairProxy);
 app.use("/order", gatewayAuth, orderProxy);
 app.use("/discount", gatewayAuth, discountProxy);
 app.use("/news", gatewayAuth, newsProxy);
+app.use("/statistics", gatewayAuth, statisticsProxy);
 app.use("/payment", paymentProxy); // Payment service tự xử lý auth
 
 // Health check
