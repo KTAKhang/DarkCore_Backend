@@ -227,7 +227,7 @@ class DiscountService {
 
             // Validate isActive field
             if (typeof updateData.isActive !== "undefined" && typeof updateData.isActive !== "boolean") {
-                return this.buildResponse("ERR", "isActive phải là boolean", null, 400);
+                return this.buildResponse("ERR", "trường hoạt động phải là boolean", null, 400);
             }
 
             // Check for duplicate code

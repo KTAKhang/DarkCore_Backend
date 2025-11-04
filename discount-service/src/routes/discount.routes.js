@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-// Reuse auth middleware via local re-export wrapper
+// middlewere để xác thực user và admin
 const { authAdminMiddleware, authUserMiddleware } = require("../middlewares/authMiddleware");
 
 const {

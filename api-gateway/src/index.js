@@ -15,8 +15,9 @@ import {
   orderProxy,
   discountProxy,
   favoriteProxy,
-  repairProxy
-  productReviewProxy
+  repairProxy,
+  productReviewProxy,
+  statisticsProxy
 
 } from "./routers/proxyRoutes.js";
 
@@ -69,6 +70,7 @@ app.use("/review", gatewayAuth, productReviewProxy);
 app.use("/order", gatewayAuth, orderProxy);
 app.use("/discount", gatewayAuth, discountProxy);
 app.use("/news", gatewayAuth, newsProxy);
+app.use("/statistics", gatewayAuth, statisticsProxy);
 
 // Health check
 app.get("/", (req, res) => {

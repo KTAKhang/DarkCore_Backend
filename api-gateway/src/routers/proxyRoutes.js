@@ -157,6 +157,30 @@ export const repairProxy = createProxyMiddleware("/repair", {
   changeOrigin: true,
   pathRewrite: { "^/repair": "" },
 });
+
+// Statistics Service
+export const statisticsProxy = createProxyMiddleware("/statistics", {
+  target: process.env.STATISTICS_SERVICE_URL || "http://localhost:8386",
+  changeOrigin: true,
+  pathRewrite: { "^/statistics": "/api/statistics" },
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Statistics service unavailable");
+  },
+});
+
 console.log("CART_SERVICE_URL =", process.env.CART_SERVICE_URL);
 
 export default router;
