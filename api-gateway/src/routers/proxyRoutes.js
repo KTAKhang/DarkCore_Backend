@@ -57,6 +57,18 @@ export const productReviewProxy = createProxyMiddleware("/review", {
   pathRewrite: { "^/review": "" },
 });
 
+export const productReviewGuestProxy = createProxyMiddleware("/review-guest", {
+  target: process.env.GUEST_SERVICE_URL || "http://localhost:3213",
+  changeOrigin: true,
+  pathRewrite: { "^/review-guest": "" },
+});
+
+export const saleStaffOrderProxy = createProxyMiddleware("/sale-staff", {
+  target: process.env.SALE_STAFF_SERVICE_URL || "http://localhost:3215",
+  changeOrigin: true,
+  pathRewrite: { "^/sale-staff": "" },
+});
+
 // Catalog Home Service
 export const cataloghomeProxy = createProxyMiddleware("/cataloghome", {
   target: process.env.CATALOGHOME_SERVICE_URL || "http://localhost:3004",
@@ -69,17 +81,73 @@ export const cartProxy = createProxyMiddleware("/cart", {
   changeOrigin: true,
   pathRewrite: { "^/cart": "" },
 });
-export const paymentProxy = createProxyMiddleware("/news", {
-  target: process.env.NEWS_SERVICE_URL || "http://localhost:3007",
+
+
+// About Service Proxy (Thông tin About Us và Founders)
+export const aboutProxy = createProxyMiddleware("/about", {
+  target: process.env.ABOUT_SERVICE_URL || "http://localhost:3006",
   changeOrigin: true,
-  pathRewrite: { "^/payment": "" },
+  pathRewrite: { "^/about": "" },
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("About service unavailable");
+  },
 });
+
+
+export const paymentProxy = createProxyMiddleware("/payment", {
+  target: process.env.PAYMENT_SERVICE_URL || "http://localhost:3007",
+  changeOrigin: true,
+  pathRewrite: { "^/payment": "/api/payment" },
+  onProxyReq: function (proxyReq, req, res) {
+    console.log('🔍 Payment Proxy - Request:', req.method, req.url);
+    console.log('🔍 Payment Proxy - Headers:', req.headers.authorization ? 'Has token' : 'No token');
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    console.log('🔍 Payment Proxy - Forwarding to:', process.env.PAYMENT_SERVICE_URL || "http://localhost:3007");
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Payment service unavailable");
+  },
+});
+
 export const newsProxy = createProxyMiddleware("/news", {
   target: process.env.NEWS_SERVICE_URL || "http://localhost:3008",
   changeOrigin: true,
   pathRewrite: { "^/news": "" },
 });
-
+export const contactProxy = createProxyMiddleware("/contacts", {
+  target: process.env.CONTACT_SERVICE_URL || "http://localhost:3020",
+  changeOrigin: true,
+  pathRewrite: { "^/contacts": "/contacts" },
+});
+// Product Service Proxy For Staff
+export const productProxy = createProxyMiddleware("/product", {
+  target: process.env.PRODUCT_SERVICE_URL || "http://localhost:3123",
+  changeOrigin: true,
+  pathRewrite: { "^/product": "/product" },
+});
 // Order Service Proxy
 export const orderProxy = createProxyMiddleware("/order", {
   target: process.env.ORDER_SERVICE_URL || "http://localhost:3010",
@@ -184,4 +252,3 @@ export const statisticsProxy = createProxyMiddleware("/statistics", {
 console.log("CART_SERVICE_URL =", process.env.CART_SERVICE_URL);
 
 export default router;
-

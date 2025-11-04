@@ -8,48 +8,44 @@ const { createVnpayUrl } = require("../service/vnpayService");
 // ================================
 const createPayment = async (req, res) => {
   try {
-    const { orderId, amount, bankCode } = req.body;
+    const { txnRef, amount, bankCode, orderData } = req.body;
 
-    if (!orderId || !amount) {
+    // ✅ Validation: chỉ cần txnRef (temporary ID) và amount
+    if (!txnRef || !amount) {
       return res.status(400).json({ 
         status: "ERR", 
-        message: "Thiếu orderId hoặc amount" 
+        message: "Thiếu txnRef hoặc amount" 
       });
     }
 
-    //  Kiểm tra đơn hàng có tồn tại không
-    const order = await Order.findById(orderId);
-    if (!order) {
-      return res.status(404).json({ 
-        status: "ERR", 
-        message: "Không tìm thấy đơn hàng" 
-      });
-    }
+    // ✅ XÓA PHẦN KIỂM TRA ORDER - vì order chưa tồn tại
+    // Order sẽ được tạo SAU KHI thanh toán thành công trong callback
+    
+    console.log("🔧 Creating payment URL with txnRef:", txnRef);
+    console.log("🔧 Order data to be saved after payment:", orderData);
 
-    // Tạo URL VNPay
-    const paymentUrl = createVnpayUrl(orderId, amount, bankCode);
+    // Tạo URL VNPay với txnRef tạm thời
+    const paymentUrl = createVnpayUrl(txnRef, amount, bankCode);
     console.log("🔧 Generated VNPay URL:", paymentUrl);
 
-    // Lưu Payment vào DB
-    const newPayment = new Payment({
-      orderId,
-      amount,
-      method: "VNPAY",
-      status: "pending",
-    });
-    await newPayment.save();
+    // ✅ KHÔNG LƯU PAYMENT VÀO DB - vì chưa có order
+    // Payment sẽ được tạo SAU KHI order được tạo trong callback
 
-    console.log("✅ Created VNPay Payment:", orderId);
+    console.log("✅ Created VNPay Payment URL for txnRef:", txnRef);
     res.status(200).json({ 
       status: "OK", 
       message: "Tạo URL thanh toán thành công",
-      data: { paymentUrl } 
+      data: { 
+        paymentUrl,
+        txnRef 
+      } 
     });
   } catch (err) {
     console.error("❌ Error createPayment:", err);
     res.status(500).json({ 
       status: "ERR", 
-      message: "Không thể tạo thanh toán VNPay" 
+      message: "Không thể tạo thanh toán VNPay",
+      error: err.message 
     });
   }
 };
@@ -60,8 +56,12 @@ const createPayment = async (req, res) => {
 const vnpayCallback = async (req, res) => {
   try {
     const vnp_ResponseCode = req.query.vnp_ResponseCode;
-    const vnp_TxnRef = req.query.vnp_TxnRef; // orderId
+    const vnp_TxnRef = req.query.vnp_TxnRef; // txnRef tạm thời
     const vnp_SecureHash = req.query.vnp_SecureHash;
+    const vnp_Amount = req.query.vnp_Amount;
+
+    console.log("🔔 VNPay callback received for txnRef:", vnp_TxnRef);
+    console.log("🔔 Response code:", vnp_ResponseCode);
 
     // Xác minh chữ ký VNPay
     const sortedParams = {};
@@ -84,34 +84,29 @@ const vnpayCallback = async (req, res) => {
 
     if (secureHash !== vnp_SecureHash) {
       console.warn("⚠️ Invalid VNPay signature");
-      return res.status(400).json({ error: "Sai chữ ký VNPay" });
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      return res.redirect(`${baseUrl}/payment-result?status=error&message=Invalid signature`);
     }
 
     // Xác định trạng thái thanh toán
     const status = vnp_ResponseCode === "00" ? "success" : "failed";
+    console.log("✅ Payment status:", status);
 
-    // Cập nhật Payment
-    await Payment.findOneAndUpdate({ orderId: vnp_TxnRef }, { status });
-
-    // Cập nhật trạng thái đơn hàng
-    const order = await Order.findById(vnp_TxnRef);
-    if (order) {
-      order.paymentStatus = status === "success" ? "paid" : "failed";
-      await order.save();
-      console.log(`✅ Order ${vnp_TxnRef} updated to ${order.paymentStatus}`);
-    } else {
-      console.warn("⚠️ Order not found:", vnp_TxnRef);
-    }
-
+    // ✅ KHÔNG TẠO ORDER Ở ĐÂY - Frontend sẽ gọi API createOrderFromPayment sau khi verify
+    // Chỉ redirect về frontend với thông tin thanh toán
+    
     // Redirect về frontend với đầy đủ thông tin
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const redirectUrl = `${baseUrl}/payment-result?vnp_ResponseCode=${vnp_ResponseCode}&vnp_TransactionStatus=${req.query.vnp_TransactionStatus}&vnp_TxnRef=${vnp_TxnRef}&vnp_Amount=${req.query.vnp_Amount}&vnp_OrderInfo=${req.query.vnp_OrderInfo}`;
+    const redirectUrl = `${baseUrl}/payment-result?vnp_ResponseCode=${vnp_ResponseCode}&vnp_TransactionStatus=${req.query.vnp_TransactionStatus}&vnp_TxnRef=${vnp_TxnRef}&vnp_Amount=${vnp_Amount}&vnp_OrderInfo=${encodeURIComponent(req.query.vnp_OrderInfo || '')}`;
+    
     console.log('🔗 Redirecting to:', redirectUrl);
     console.log('🔗 VNPay params:', req.query);
+    
     return res.redirect(redirectUrl);
   } catch (err) {
     console.error("❌ Error in VNPay callback:", err);
-    res.status(500).json({ error: "Xử lý callback thất bại" });
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    return res.redirect(`${baseUrl}/payment-result?status=error&message=Callback error`);
   }
 };
 
@@ -144,7 +139,7 @@ const refundPayment = async (req, res) => {
 };
 
 // ================================
-// 4️⃣ XEM DANH SÁCH GIAO DỊCH THẤT BẠI
+//  XEM DANH SÁCH GIAO DỊCH THẤT BẠI
 // ================================
 const getFailedPayments = async (req, res) => {
   try {

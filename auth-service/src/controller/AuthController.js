@@ -1,7 +1,6 @@
 const UserModel = require("../models/UserModel");
 const AuthService = require("../services/AuthService");
 
-
 const loginWithGoogle = async (req, res) => {
     try {
         const { idToken } = req.body;
@@ -99,8 +98,6 @@ const refreshTokenController = async (req, res) => {
         return res.status(401).json({ status: "ERR", message: error.message });
     }
 };
-
-
 
 const logoutController = async (req, res) => {
     try {
@@ -211,7 +208,6 @@ const sendRegisterOTP = async (req, res) => {
     }
 };
 
-
 const confirmRegisterOTP = async (req, res) => {
     try {
         const { email, otp } = req.body;
@@ -237,7 +233,6 @@ const confirmRegisterOTP = async (req, res) => {
         });
     }
 };
-
 
 const forgotPassword = async (req, res) => {
     try {
@@ -307,6 +302,24 @@ const resetPassword = async (req, res) => {
     }
 };
 
+const verifyTokenController = async (req, res) => {
+    try {
+        const { access_token } = req.body;
+        const result = await AuthService.verifyAccessToken(access_token);
+
+        return res.status(result.code).json({
+            status: result.status,
+            message: result.message,
+            data: result.data || null,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            status: "ERR",
+            message: error.message,
+        });
+    }
+};
+
 module.exports = {
     forgotPassword,
     resetPassword,
@@ -315,5 +328,6 @@ module.exports = {
     loginWithGoogle,
     loginUser,
     refreshTokenController,
-    logoutController
+    logoutController,
+    verifyTokenController
 };

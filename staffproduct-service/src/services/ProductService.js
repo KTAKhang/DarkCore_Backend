@@ -125,7 +125,7 @@ const getProducts = async (query = {}) => {
         }
 
         // Xử lý sort theo giá sản phẩm và ngày tạo
-        let sortOption = { createdAt: -1 }; // ✅ Mặc định KHÔNG sort gì cả
+        let sortOption = {}; // ✅ Mặc định KHÔNG sort gì cả
         const sortBy = (query.sortBy ?? "").toString().trim().toLowerCase();
         const sortOrder = (query.sortOrder ?? "").toString().trim().toLowerCase();
         

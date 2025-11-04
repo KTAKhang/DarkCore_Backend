@@ -24,13 +24,21 @@ swaggerDocs(app);
 mongoose
     .connect(process.env.MONGO_URL)
     .then(() => {
-        console.log(" Connected to MongoDB");
-        console.log(` Swagger Docs available at http://localhost:${port}/api-docs`);
+        console.log("✅ Kết nối MongoDB thành công!");
+        console.log(`📊 Database: ${mongoose.connection.db.databaseName}`);
+        console.log(`🌐 Host: ${mongoose.connection.host}`);
+        console.log(`📝 Swagger Docs: http://localhost:${port}/api-docs`);
+        console.log("=".repeat(50));
     })
     .catch((error) => {
-        console.error(" MongoDB connection error:", error);
+        console.error("❌ Lỗi kết nối MongoDB:", error.message);
+        process.exit(1);
     });
 
 app.listen(port, () => {
-    console.log(` Server is running on http://localhost:${port}`);
+    console.log("=".repeat(50));
+    console.log(`🚀 Server đang chạy thành công!`);
+    console.log(`🔗 URL: http://localhost:${port}`);
+    console.log(`⏰ Thời gian khởi động: ${new Date().toLocaleString('vi-VN')}`);
+    console.log("=".repeat(50));
 });
