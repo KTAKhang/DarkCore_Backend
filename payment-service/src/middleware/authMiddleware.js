@@ -12,6 +12,7 @@ const authMiddleware = (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
+
     console.log('🔍 Payment Service Auth - Token exists, verifying...');
     
     // Sử dụng ACCESS_TOKEN_SECRET giống Auth Service

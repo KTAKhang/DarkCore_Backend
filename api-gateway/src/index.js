@@ -19,10 +19,13 @@ import {
   favoriteProxy,
   repairProxy,
   productReviewProxy,
+  statisticsProxy,
   productReviewGuestProxy,
   saleStaffOrderProxy,
+
   paymentProxy,
   reviewStaffProxy, // ✅ THÊM DÒNG NÀY
+
 } from "./routers/proxyRoutes.js";
 import { gatewayAuth } from "../middleware/auth.js";
 
@@ -89,6 +92,7 @@ app.use("/repair", gatewayAuth, repairProxy);
 app.use("/order", gatewayAuth, orderProxy);
 app.use("/discount", gatewayAuth, discountProxy);
 app.use("/news", gatewayAuth, newsProxy);
+app.use("/statistics", gatewayAuth, statisticsProxy);
 app.use("/payment", paymentProxy); // Payment service tự xử lý auth
 
 // Health check
