@@ -1,9 +1,22 @@
-require("./RolesModel");
-require("./UserModel");
-require("./ProductModel");
-require("./ProductReviewsModel");
-require("./OrderStatusModel");
-require("./OrderModel");
-require("./OrderDetailModel");
+const mongoose = require("mongoose");
 
-console.log("✅ All models loaded successfully.");
+// Import all models
+const RoleModel = require("./RolesModel");
+const UserModel = require("./UserModel");
+const ProductModel = require("./ProductModel");
+const ProductReviewModel = require("./ProductReviewsModel");
+const OrderModel = require("./OrderModel");
+const OrderDetailModel = require("./OrderDetailModel");
+const OrderStatusModel = require("./OrderStatusModel");
+
+// Export all models
+module.exports = {
+    RoleModel,
+    UserModel,
+    ProductModel,
+    ProductReviewModel,
+    OrderModel,
+    OrderDetailModel,
+    OrderStatusModel,
+};
+

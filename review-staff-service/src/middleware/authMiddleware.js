@@ -49,10 +49,21 @@ const authCustomerMiddleware = (req, res, next) => {
     next();
 };
 
+const authSaleStaffMiddleware = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ message: "Không có thông tin user", status: "ERR" });
+    }
 
+    if (req.user.role !== "sales-staff") {
+        return res.status(403).json({ message: "Chỉ nhân viên bán hàn mới được truy cập", status: "ERR" });
+    }
+
+    next();
+};
 
 module.exports = {
     attachUserFromHeader,
     authAdminMiddleware,
     authCustomerMiddleware,
+    authSaleStaffMiddleware,
 };
