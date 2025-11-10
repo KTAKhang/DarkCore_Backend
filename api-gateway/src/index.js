@@ -21,7 +21,7 @@ import {
   repairProxy,
   productReviewProxy,
   productReviewGuestProxy,
-  saleStaffOrderProxy
+  saleStaffOrderProxy,
   paymentProxy
 
 } from "./routers/proxyRoutes.js";
