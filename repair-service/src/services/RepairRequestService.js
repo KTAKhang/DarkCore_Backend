@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const RepairRequestModel = require("../models/RepairRequestModel");
 const RepairServiceModel = require("../models/RepairServiceModel");
+const { sendRepairCompletionEmail } = require("./EmailService");
 require("../models/UserModel");
 
 class RepairRequestService {
@@ -9,12 +10,25 @@ class RepairRequestService {
 		return services.reduce((sum, s) => sum + (s.basePrice || 0), 0);
 	}
 
+	// Snapshot service details to preserve pricing history
+	static async snapshotServices(serviceIds) {
+		const services = await RepairServiceModel.find({ _id: { $in: serviceIds } });
+		return services.map(s => ({
+			serviceId: s._id,
+			serviceName: s.name, 
+			servicePrice: s.basePrice || 0
+		}));
+	}
+
 	static async createRequest(userId, payload) {
 		const { services, ...rest } = payload;
 		const estimatedCost = await this.calculateEstimatedCost(services);
+		const serviceSnapshots = await this.snapshotServices(services);
+		
 		return await RepairRequestModel.create({
 			user: userId,
 			services,
+			serviceSnapshots,
 			estimatedCost,
 			...rest,
 		});
@@ -28,6 +42,7 @@ class RepairRequestService {
 
 		if (payload.services) {
 			payload.estimatedCost = await this.calculateEstimatedCost(payload.services);
+			payload.serviceSnapshots = await this.snapshotServices(payload.services);
 		}
 		return await RepairRequestModel.findByIdAndUpdate(requestId, payload, { new: true });
 	}
@@ -43,11 +58,29 @@ class RepairRequestService {
 	}
 
 	static async listAllRequests(filter = {}) {
-		return await RepairRequestModel.find(filter)
+		const requests = await RepairRequestModel.find(filter)
 			.populate("user", "user_name email role_id")
-			.populate("services")
+			.populate("services") // Populate for old data
 			.populate("assignedTechnician", "user_name email role_id")
 			.sort({ createdAt: -1 });
+
+		// Process each request to use snapshots if available (overwrite populated services)
+		return requests.map(request => {
+			const reqObj = request.toObject();
+			
+			// If we have serviceSnapshots (new data), use them instead
+			if (reqObj.serviceSnapshots && reqObj.serviceSnapshots.length > 0) {
+				reqObj.services = reqObj.serviceSnapshots.map(snapshot => ({
+					_id: snapshot.serviceId,
+					name: snapshot.serviceName, 
+					serviceName: snapshot.serviceName,
+					basePrice: snapshot.servicePrice
+				}));
+			}
+			// Otherwise keep the populated services (for old data)
+			
+			return reqObj;
+		});
 	}
 
 	static async searchAndFilterRequests(searchParams = {}) {
@@ -74,7 +107,7 @@ class RepairRequestService {
 					from: "repairservices",
 					localField: "services",
 					foreignField: "_id",
-					as: "services"
+					as: "servicesPopulated"
 				}
 			},
 			{
@@ -95,6 +128,31 @@ class RepairRequestService {
 				$unwind: {
 					path: "$assignedTechnician",
 					preserveNullAndEmptyArrays: true
+				}
+			},
+			{
+				// Add serviceDetails field that prioritizes snapshots over populated services
+				$addFields: {
+					services: {
+						$cond: {
+							if: { $and: [
+								{ $isArray: "$serviceSnapshots" },
+								{ $gt: [{ $size: "$serviceSnapshots" }, 0] }
+							]},
+							then: {
+								$map: {
+									input: "$serviceSnapshots",
+									as: "snapshot",
+									in: {
+										_id: "$$snapshot.serviceId",
+										serviceName: "$$snapshot.serviceName",
+										basePrice: "$$snapshot.servicePrice"
+									}
+								}
+							},
+							else: "$servicesPopulated"
+						}
+					}
 				}
 			}
 		];
@@ -148,10 +206,30 @@ class RepairRequestService {
 	}
 
 	static async getById(id) {
-		return await RepairRequestModel.findById(id)
+		const request = await RepairRequestModel.findById(id)
 			.populate("user", "user_name email role_id")
-			.populate("services")
 			.populate("assignedTechnician", "user_name email role_id");
+
+		if (!request) return null;
+
+		// Convert to plain object to modify
+		const requestObj = request.toObject();
+
+		// If we have serviceSnapshots (new data), use them instead of populating
+		if (requestObj.serviceSnapshots && requestObj.serviceSnapshots.length > 0) {
+			requestObj.services = requestObj.serviceSnapshots.map(snapshot => ({
+				_id: snapshot.serviceId,
+				serviceName: snapshot.serviceName,
+				name: snapshot.serviceName, // Add 'name' field too for compatibility
+				basePrice: snapshot.servicePrice
+			}));
+		} else {
+			// For old data without snapshots, populate services from database
+			await request.populate("services");
+			requestObj.services = request.services;
+		}
+
+		return requestObj;
 	}
 
 	static async listMine(userId) {
@@ -166,15 +244,52 @@ class RepairRequestService {
 		return request;
 		}
 
+	static async sendCompletionEmail(request) {
+		try {
+			// Populate user and services
+			await request.populate("user");
+			
+			// Get service details (prefer snapshots)
+			let services = [];
+			if (request.serviceSnapshots && request.serviceSnapshots.length > 0) {
+				services = request.serviceSnapshots.map(snapshot => ({
+					name: snapshot.serviceName,
+					serviceName: snapshot.serviceName,
+					basePrice: snapshot.servicePrice
+				}));
+			} else {
+				await request.populate("services");
+				services = request.services;
+			}
+			
+		// Send email
+		await sendRepairCompletionEmail(request, request.user, services);
+		} catch (error) {
+			console.error('❌ Failed to send completion email:', error);
+			// Don't throw - we don't want to fail the status update if email fails
+		}
+	}
+
 	static async updateStatus(requestId, actorId, nextStatus) {
 		const request = await RepairRequestModel.findById(requestId);
 		if (!request) return null;
+
+		// Lock status if already completed - cannot change
+		if (request.status === "completed") {
+			return "LOCKED";
+		}
 
 		const validStatuses = ["waiting", "in-progress", "completed", "canceled"];
 		if (!validStatuses.includes(nextStatus)) return "INVALID";
 
 		request.status = nextStatus;
 		await request.save();
+		
+		// Send email notification if status changed to completed
+		if (nextStatus === "completed") {
+			await this.sendCompletionEmail(request);
+		}
+		
 		return request;
 	}
 
@@ -183,7 +298,7 @@ class RepairRequestService {
 		
 		const repairs = await RepairRequestModel.find({ assignedTechnician: technicianId })
 			.populate("user", "user_name email role_id")
-			.populate("services")
+			.populate("services") // Populate for old data
 			.populate("assignedTechnician", "user_name email role_id")
 			.sort({ createdAt: -1 })
 			.skip((page - 1) * limit)
@@ -191,8 +306,26 @@ class RepairRequestService {
 			
 		const total = await RepairRequestModel.countDocuments({ assignedTechnician: technicianId });
 		
+		// Process repairs to use snapshots if available
+		const processedRepairs = repairs.map(repair => {
+			const repairObj = repair.toObject();
+			
+			// If we have serviceSnapshots (new data), use them instead
+			if (repairObj.serviceSnapshots && repairObj.serviceSnapshots.length > 0) {
+				repairObj.services = repairObj.serviceSnapshots.map(snapshot => ({
+					_id: snapshot.serviceId,
+					name: snapshot.serviceName,
+					serviceName: snapshot.serviceName,
+					basePrice: snapshot.servicePrice
+				}));
+			}
+			// Otherwise keep the populated services (for old data)
+			
+			return repairObj;
+		});
+		
 		return {
-			repairs,
+			repairs: processedRepairs,
 			pagination: {
 				page: parseInt(page),
 				limit: parseInt(limit),

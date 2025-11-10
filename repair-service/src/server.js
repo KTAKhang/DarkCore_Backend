@@ -3,9 +3,14 @@ const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const path = require("path");
 const routes = require("./routes");
 
+// Try to load .env from current directory, fallback to parent directory
 dotenv.config();
+if (!process.env.MONGO_URL) {
+  dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+}
 
 const app = express();
 const port = process.env.PORT || 4006;

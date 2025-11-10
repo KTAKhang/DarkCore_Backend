@@ -11,7 +11,6 @@ const contactReplySchema = new mongoose.Schema(
     senderId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     senderRole: { type: String, enum: ["customer", "admin"], required: true },
 
-
     message: {
       type: String,
       required: true,

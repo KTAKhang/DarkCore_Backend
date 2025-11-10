@@ -316,6 +316,17 @@ const updateOrderStatus = async (id, payload) => {
         const currentStatusName = order.orderStatusId.name;
         const newStatusName = newStatus.name;
 
+        // ✅ Chặn hủy/trả hàng với đơn thanh toán VNPay
+        if (
+            order.paymentMethod === "vnpay" &&
+            (newStatusName === "cancelled" || newStatusName === "returned")
+        ) {
+            return {
+                status: "ERR",
+                message: "Đơn hàng thanh toán VNPay không thể hủy hoặc trả hàng"
+            };
+        }
+
         // ✅ Lấy luồng chuyển trạng thái hợp lệ
         const validTransitions = getValidTransitions();
 
@@ -430,7 +441,14 @@ const getNextValidStatuses = async (orderId) => {
         // Lấy luồng chuyển trạng thái hợp lệ
         const validTransitions = getValidTransitions();
 
-        const allowedStatusNames = validTransitions[currentStatusName] || [];
+        let allowedStatusNames = validTransitions[currentStatusName] || [];
+
+        // Chặn các trạng thái hủy/trả với đơn thanh toán VNPay
+        if (order.paymentMethod === "vnpay") {
+            allowedStatusNames = allowedStatusNames.filter(
+                (statusName) => statusName !== "cancelled" && statusName !== "returned"
+            );
+        }
         
         // Lấy chi tiết các trạng thái hợp lệ
         const nextStatuses = await OrderStatusModel.find({ 

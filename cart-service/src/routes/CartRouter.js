@@ -3,7 +3,6 @@ const router = express.Router();
 const CartController = require("../controller/CartController");
 const {
   attachUserFromHeader,
-  authUserMiddleware,
   authRoleMiddleware,
 } = require("../middleware/authCart");
 

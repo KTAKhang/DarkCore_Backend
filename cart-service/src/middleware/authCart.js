@@ -1,88 +1,79 @@
-const mongoose = require("mongoose"); 
+const mongoose = require("mongoose");
+
 // Middleware để gắn thông tin người dùng từ header x-user vào req.user
+// Giữ nguyên tên hàm để tương thích với các route hiện có
 const attachUserFromHeader = (req, res, next) => {
   try {
-    // Ghi log header x-user để debug
-    console.log("x-user header:", req.headers["x-user"]);
-    // Kiểm tra xem header x-user có tồn tại không
-    if (!req.headers["x-user"]) {
-      return res
-        .status(401)
-        .json({ message: "Missing user header", status: "ERR" }); // Trả lỗi 401 nếu thiếu header
+    const userHeader = req.headers["x-user"];
+
+    if (!userHeader) {
+      return res.status(401).json({ status: "ERR", code: 401, message: "Thiếu thông tin user trong header x-user" });
     }
 
-    // Parse dữ liệu JSON từ header x-user
-    const user = JSON.parse(req.headers["x-user"]);
-    // Ghi log dữ liệu user đã parse để debug
-    console.log("Parsed user:", user);
-    // Kiểm tra xem user có chứa _id hoặc userId không
-    if (!user._id && !user.userId) {
-      return res
-        .status(400)
-        .json({
-          message: "Invalid user header: missing _id or userId",
-          status: "ERR",
-        }); // Trả lỗi 400 nếu thiếu _id hoặc userId
+    let user;
+    try {
+      user = typeof userHeader === "string" ? JSON.parse(userHeader) : userHeader;
+    } catch (e) {
+      console.error("attachUserFromHeader: invalid JSON in x-user header", e.message);
+      return res.status(400).json({ status: "ERR", code: 400, message: "Header x-user không hợp lệ (JSON)" });
     }
 
-    // Chuyển đổi _id hoặc userId thành ObjectId của mongoose
-    user._id = new mongoose.Types.ObjectId(user._id || user.userId);
-    // Gắn thông tin user vào req để sử dụng trong các middleware/controller tiếp theo
+    // Hỗ trợ cả _id hoặc userId
+    const idCandidate = user._id || user.userId;
+    if (!idCandidate) {
+      return res.status(400).json({ status: "ERR", code: 400, message: "Thiếu _id hoặc userId trong header x-user" });
+    }
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(idCandidate)) {
+      return res.status(400).json({ status: "ERR", code: 400, message: "User ID không hợp lệ" });
+    }
+
+    // Ensure _id is a string ObjectId
+    user._id = idCandidate.toString();
+
+    // Check if account is locked/disabled
+    if (user.status === false) {
+      return res.status(403).json({ status: "ERR", code: 403, message: "Tài khoản đã bị khóa" });
+    }
+
     req.user = user;
-    // Chuyển sang middleware tiếp theo
-    next();
+    return next();
   } catch (err) {
-    // Ghi log lỗi khi parse header x-user
-    console.error("Error parsing x-user:", err.message);
-    // Trả lỗi 400 nếu format header không hợp lệ
-    return res
-      .status(400)
-      .json({ message: "Invalid user header format", status: "ERR" });
+    console.error("attachUserFromHeader error:", err);
+    return res.status(500).json({ status: "ERR", code: 500, message: "Lỗi nội bộ khi xử lý header x-user" });
   }
 };
 
 // Middleware để kiểm tra xem có thông tin người dùng hợp lệ trong req.user không
-const authUserMiddleware = (req, res, next) => {
-  // Kiểm tra xem req.user và req.user._id có tồn tại không
-  if (!req.user || !req.user._id) {
-    return res
-      .status(401)
-      .json({ message: "No user data or invalid userId", status: "ERR" }); // Trả lỗi 401 nếu thiếu thông tin user
-  }
-  // Chuyển sang middleware tiếp theo nếu hợp lệ
-  next();
-};
+
 
 // Middleware để kiểm tra vai trò (role) của người dùng
-const authRoleMiddleware = (allowedRoles) => async (req, res, next) => {
-  try {
-    // Kiểm tra xem req.user và req.user._id có tồn tại không
-    if (!req.user || !req.user._id) {
-      return res.status(401).json({ message: "No user data", status: "ERR" }); // Trả lỗi 401 nếu thiếu thông tin user
-    }
-
-    // Lấy role từ req.user (hỗ trợ các tên trường khác nhau: role_id, role, role_name)
-    const role = req.user.role_id || req.user.role || req.user.role_name;
-    // Kiểm tra xem role có nằm trong danh sách allowedRoles không
-    if (!allowedRoles.includes(role)) {
-      return res
-        .status(403)
-        .json({ message: "Access denied: insufficient role", status: "ERR" }); // Trả lỗi 403 nếu role không được phép
-    }
-
-    // Chuyển sang middleware tiếp theo nếu role hợp lệ
-    next();
-  } catch (err) {
-    // Trả lỗi 500 nếu xảy ra lỗi trong quá trình xử lý
-    return res
-      .status(500)
-      .json({ message: "Internal server error", status: "ERR" });
+// allowedRoles: array of role strings
+const authRoleMiddleware = (allowedRoles = []) => (req, res, next) => {
+  if (!req.user || !req.user._id) {
+    return res.status(401).json({ status: "ERR", code: 401, message: "Không có thông tin user" });
   }
+
+  const role = req.user.role_id || req.user.role || req.user.role_name;
+  if (!role) {
+    return res.status(403).json({ status: "ERR", code: 403, message: "Không có thông tin role của user" });
+  }
+
+  if (!Array.isArray(allowedRoles) || allowedRoles.length === 0) {
+    // If no roles provided, treat as allowed
+    return next();
+  }
+
+  if (!allowedRoles.includes(role)) {
+    return res.status(403).json({ status: "ERR", code: 403, message: "Truy cập bị từ chối: không đủ quyền" });
+  }
+
+  return next();
 };
 
 // Xuất các middleware để sử dụng trong router
 module.exports = {
-  attachUserFromHeader, // Xuất middleware gắn thông tin user từ header
-  authUserMiddleware, // Xuất middleware kiểm tra user hợp lệ
-  authRoleMiddleware, // Xuất middleware kiểm tra vai trò
+  attachUserFromHeader,
+  authRoleMiddleware,
 };
