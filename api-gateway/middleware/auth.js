@@ -15,8 +15,9 @@ export const gatewayAuth = async (req, res, next) => {
     }
 
     try {
+        const authServiceUrl = process.env.AUTH_SERVICE_URL || "http://localhost:3001";
         const response = await axios.post(
-            `http://localhost:${process.env.PORT}/auth/verify-token`,
+            `${authServiceUrl}/verify-token`,
             { access_token: token },
             { timeout: 5000 }
         );
@@ -28,7 +29,9 @@ export const gatewayAuth = async (req, res, next) => {
                 message: result.message,
             });
         }
-        req.headers["x-user"] = JSON.stringify(result.data);
+        // Encode JSON string with URL encoding to avoid invalid characters in HTTP header
+        const userDataJson = JSON.stringify(result.data);
+        req.headers["x-user"] = encodeURIComponent(userDataJson);
         next();
 
     } catch (error) {

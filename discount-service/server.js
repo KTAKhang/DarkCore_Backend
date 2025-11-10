@@ -13,17 +13,6 @@ const MONGO_URL = process.env.MONGO_URL || process.env.DATABASE_URL;
 app.use(cors());
 app.use(express.json());
 
-// Hydrate req.user from gateway header for downstream middlewares
-app.use((req, _res, next) => {
-    try {
-        const userHeader = req.headers["x-user"];
-        if (userHeader) {
-            req.user = JSON.parse(userHeader);
-        }
-    } catch (_) {}
-    next();
-});
-
 // Health check
 app.get("/health", (_req, res) => {
     return res.status(200).json({ status: "OK", message: "Discount Service healthy", data: null });
