@@ -1,11 +1,11 @@
 const express = require("express");
 const FavoriteController = require("../controller/FavoriteController");
-const { authUserMiddleware } = require("../middleware/authMiddleware");
+const { attachUserFromHeader, authSaleStaffMiddleware, authCustomerMiddleware } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
 // Tất cả các routes yêu cầu user phải đăng nhập
-router.use(authUserMiddleware);
+router.use(attachUserFromHeader, authCustomerMiddleware);
 
 // Lấy danh sách sản phẩm yêu thích của user
 router.get("/favorites", FavoriteController.getFavorites);

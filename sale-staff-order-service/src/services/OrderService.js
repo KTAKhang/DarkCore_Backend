@@ -11,26 +11,21 @@ const getOrders = async ({ page = 1, limit = 5, search = "", status, sortBy = "c
     try {
         const filter = {};
 
-        // ========== 🔍 SEARCH ==========
         if (search && search.trim() !== "") {
             const trimmed = search.trim();
             const searchRegex = new RegExp(trimmed, "i");
             const searchConditions = [];
 
-            // Nếu là ObjectId → tìm theo _id
             if (mongoose.Types.ObjectId.isValid(trimmed)) {
                 searchConditions.push({ _id: new mongoose.Types.ObjectId(trimmed) });
             }
 
-            // Nếu là số → có thể là orderNumber
             if (!isNaN(trimmed)) {
                 searchConditions.push({ orderNumber: { $regex: searchRegex } });
             }
 
-            // Nếu là text → tìm trong receiverName, user_name, email
             searchConditions.push({ receiverName: { $regex: searchRegex } });
 
-            // 🔎 Tìm user trùng user_name hoặc email
             const matchingUsers = await UserModel.find({
                 $or: [
                     { user_name: { $regex: searchRegex } },
@@ -48,7 +43,6 @@ const getOrders = async ({ page = 1, limit = 5, search = "", status, sortBy = "c
             filter.$or = searchConditions;
         }
 
-        // ========== ⚙️ FILTER THEO STATUS NAME ==========
         if (status) {
             const foundStatus = await OrderStatusModel.findOne({
                 name: status,
@@ -74,9 +68,7 @@ const getOrders = async ({ page = 1, limit = 5, search = "", status, sortBy = "c
             }
         }
 
-        // ========== 🔽 SORT ==========
-        // Hỗ trợ 3 trường: createdAt, updatedAt, totalPrice
-        let sortOption = { createdAt: -1 }; // mặc định: mới nhất
+        let sortOption = { createdAt: -1 };
 
         if (sortBy && typeof sortBy === "string") {
             const [field, order] = sortBy.split("_");
@@ -90,12 +82,10 @@ const getOrders = async ({ page = 1, limit = 5, search = "", status, sortBy = "c
             sortOption = { [sortField]: order === "asc" ? 1 : -1 };
         }
 
-        // ========== 📊 PAGINATION ==========
         const total = await OrderModel.countDocuments(filter);
         const totalPages = Math.ceil(total / limit);
         const currentPage = Math.max(1, page);
 
-        // ========== 📦 LẤY DỮ LIỆU ==========
         const orders = await OrderModel.find(filter)
             .populate("userId", "user_name email phone")
             .populate("orderStatusId", "name description color")
@@ -104,7 +94,6 @@ const getOrders = async ({ page = 1, limit = 5, search = "", status, sortBy = "c
             .limit(limit)
             .lean();
 
-        // ========== 🧩 FORMAT KẾT QUẢ ==========
         return {
             status: "OK",
             pagination: {
@@ -126,7 +115,6 @@ const getOrders = async ({ page = 1, limit = 5, search = "", status, sortBy = "c
 
 const getOrderStats = async () => {
     try {
-        // Lấy tất cả status trước
         const statuses = await OrderStatusModel.find({ status: true, isActive: true });
         const statusMap = {};
         statuses.forEach(status => {
@@ -162,7 +150,6 @@ const getOrderStats = async () => {
     }
 };
 
-// ✅ Admin: Lấy chi tiết đơn hàng theo ID
 const getOrderById = async (id) => {
     try {
         const order = await OrderModel.findById(id)
@@ -203,36 +190,29 @@ const getValidTransitions = () => ({
     cancelled: [],
     returned: []
 });
-// ✅ Admin: Cập nhật trạng thái đơn hàng
+
 const updateOrderStatus = async (id, payload) => {
     try {
         const { orderStatusId } = payload;
 
-        console.log("orderStatusId", orderStatusId)
         if (!orderStatusId) {
             return { status: "ERR", message: "Thiếu orderStatusId" };
         }
-
-        // Kiểm tra order tồn tại
-        const order = await OrderModel.findById(id).populate("orderStatusId");
-        if (!order) return { status: "ERR", message: "Không tìm thấy đơn hàng" };
-
-        // Kiểm tra status tồn tại
         const newStatus = await OrderStatusModel.findById(orderStatusId);
         if (!newStatus) return { status: "ERR", message: "Không tìm thấy trạng thái" };
+
+        const order = await OrderModel.findById(id).populate("orderStatusId");
+        if (!order) return { status: "ERR", message: "Không tìm thấy đơn hàng" };
 
         const currentStatusName = order.orderStatusId.name;
         const newStatusName = newStatus.name;
 
-        // Lấy luồng chuyển trạng thái hợp lệ
         const validTransitions = getValidTransitions();
 
-        //  Kiểm tra nếu status hiện tại giống status mới (không cần update)
         if (currentStatusName === newStatusName) {
             return { status: "ERR", message: `Đơn hàng đã ở trạng thái ${newStatusName}` };
         }
 
-        // Kiểm tra luồng chuyển trạng thái
         const allowedTransitions = validTransitions[currentStatusName];
         if (!allowedTransitions || !allowedTransitions.includes(newStatusName)) {
             return {
@@ -241,14 +221,11 @@ const updateOrderStatus = async (id, payload) => {
             };
         }
 
-        // Cập nhật trạng thái
         const updateData = { orderStatusId };
-        // Nếu chuyển sang delivered, cập nhật deliveredAt
         if (newStatusName === "delivered") {
             updateData.deliveredAt = new Date();
         }
 
-        // Nếu chuyển sang cancelled, cập nhật cancelledAt
         if (newStatusName === "cancelled") {
             updateData.cancelledAt = new Date();
         }
@@ -263,7 +240,6 @@ const updateOrderStatus = async (id, payload) => {
     }
 };
 
-// ✅ Shared: Lấy danh sách trạng thái đơn hàng (dùng chung cho Admin và Customer)
 const getOrderStatuses = async () => {
     try {
         const statuses = await OrderStatusModel.find({ status: true, isActive: true })
