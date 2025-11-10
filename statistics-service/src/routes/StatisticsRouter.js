@@ -1,6 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const StatisticsController = require("../controllers/StatisticsController");
+const { attachUserFromHeader, authAdminMiddleware } = require("../middleware/authMiddleware");
+
+// Áp dụng middleware kiểm tra quyền admin cho tất cả route
+router.use(attachUserFromHeader, authAdminMiddleware);
 
 // Overview statistics
 router.get("/overview", StatisticsController.getOverviewStatistics);

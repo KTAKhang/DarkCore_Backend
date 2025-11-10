@@ -1,55 +1,80 @@
-const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 
-const decodeOptional = (req, _res, next) => {
-	const token = req.headers.authorization?.split(" ")[1];
-	if (!token) {
-		req.user = null;
-		return next();
-	}
-	try {s
-		req.user = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-		return next();
-	} catch (_err) {
-		req.user = null;
-		return next();
-	}
+const attachUserFromHeader = (req, res, next) => {
+    try {
+        const userHeader = req.headers["x-user"];
+        if (!userHeader) {
+            console.error("❌ Repair Service: Missing x-user header");
+            return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
+        }
+
+        // Decode URL encoded JSON string
+        const userDataJson = decodeURIComponent(userHeader);
+        const user = JSON.parse(userDataJson);
+        console.log("🔍 Repair Service: User from header - role:", user.role, "id:", user._id);
+
+        if (!mongoose.Types.ObjectId.isValid(user._id)) {
+            console.error("❌ Repair Service: Invalid user ID:", user._id);
+            return res.status(400).json({ message: "User ID không hợp lệ", status: "ERR" });
+        }
+
+        if (user.status === false) {
+            console.error("❌ Repair Service: User account is locked");
+            return res.status(403).json({ message: "Tài khoản đã bị khóa", status: "ERR" });
+        }
+
+        req.user = user;
+        next();
+    } catch (err) {
+        console.error("❌ Repair Service attachUserFromHeader error:", err.message);
+        console.error("❌ Header value:", req.headers["x-user"]);
+        return res.status(400).json({ message: "Header user không hợp lệ", status: "ERR" });
+    }
 };
 
-const requireAuth = (req, res, next) => {
-	const token = req.headers.authorization?.split(" ")[1];
-	if (!token) return res.status(401).json({ error: "Missing token" });
-	try {
-		req.user = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-		return next();
-	} catch (err) {
-		if (err.name === "TokenExpiredError") {
-			return res.status(401).json({ error: "Token expired" });
-		}
-		return res.status(403).json({ error: "Invalid token" });
-	}
+const authUserMiddleware = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ message: "Không có thông tin user", status: "ERR" });
+    }
+    next();
 };
 
-const requireAdmin = (req, res, next) => {
-	requireAuth(req, res, () => {
-		if (req.user?.role !== "admin") return res.status(403).json({ error: "Admin access required" });
-		return next();
-	});
+const authAdminMiddleware = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ message: "Không có thông tin user", status: "ERR" });
+    }
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Chỉ admin mới được truy cập", status: "ERR" });
+    }
+
+    next();
 };
 
-const requireAdminOrRepairStaff = (req, res, next) => {
-	requireAuth(req, res, () => {
-		if (req.user?.role === "admin" || req.user?.role === "repair-staff") return next();
-		return res.status(403).json({ error: "Admin or repair-staff required" });
-	});
+const authAdminOrRepairStaffMiddleware = (req, res, next) => {
+    if (!req.user) {
+        console.error("❌ Repair Service: No user data in request");
+        return res.status(401).json({ message: "Không có thông tin user", status: "ERR" });
+    }
+
+    console.log("🔍 Repair Service: Checking role - current role:", req.user.role);
+    if (req.user.role !== "admin" && req.user.role !== "repair-staff") {
+        console.error("❌ Repair Service: Access denied - role:", req.user.role);
+        return res.status(403).json({ 
+            message: "Chỉ admin hoặc repair-staff mới được truy cập", 
+            status: "ERR",
+            userRole: req.user.role 
+        });
+    }
+
+    next();
 };
 
-const requireTechnicianOrAdmin = (req, res, next) => {
-	requireAuth(req, res, () => {
-		if (req.user?.role === "admin" || req.user?.role === "repair-staff") return next();
-		return res.status(403).json({ error: "Technician or admin required" });
-	});
+module.exports = {
+    attachUserFromHeader,
+    authUserMiddleware,
+    authAdminMiddleware,
+    authAdminOrRepairStaffMiddleware,
 };
-
-module.exports = { decodeOptional, requireAuth, requireAdmin, requireAdminOrRepairStaff, requireTechnicianOrAdmin };
 
 

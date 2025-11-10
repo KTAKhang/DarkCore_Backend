@@ -55,7 +55,26 @@ export const catalogProxy = createProxyMiddleware("/catalog", {
   changeOrigin: true,
 
   pathRewrite: { "^/catalog": "" },
-
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Catalog service unavailable");
+  },
 });
 
 // Staff Service
@@ -67,7 +86,26 @@ export const staffProxy = createProxyMiddleware("/staff", {
   changeOrigin: true,
 
   pathRewrite: { "^/staff": "" },
-
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Staff service unavailable");
+  },
 });
 
 export const profileProxy = createProxyMiddleware("/profile", {
@@ -77,7 +115,26 @@ export const profileProxy = createProxyMiddleware("/profile", {
   changeOrigin: true,
 
   pathRewrite: { "^/profile": "" },
-
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Profile service unavailable");
+  },
 });
 
 export const customerProxy = createProxyMiddleware("/customer", {
@@ -87,7 +144,26 @@ export const customerProxy = createProxyMiddleware("/customer", {
   changeOrigin: true,
 
   pathRewrite: { "^/customer": "" },
-
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Customer service unavailable");
+  },
 });
 
 export const productReviewProxy = createProxyMiddleware("/review", {
@@ -97,7 +173,26 @@ export const productReviewProxy = createProxyMiddleware("/review", {
   changeOrigin: true,
 
   pathRewrite: { "^/review": "" },
-
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Product review service unavailable");
+  },
 });
 
 export const productReviewGuestProxy = createProxyMiddleware("/review-guest", {
@@ -117,7 +212,26 @@ export const saleStaffOrderProxy = createProxyMiddleware("/sale-staff", {
   changeOrigin: true,
 
   pathRewrite: { "^/sale-staff": "" },
-
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Sale staff order service unavailable");
+  },
 });
 
 // Catalog Home Service
@@ -139,6 +253,27 @@ export const cartProxy = createProxyMiddleware("/cart", {
   changeOrigin: true,
 
   pathRewrite: { "^/cart": "" },
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Cart service unavailable");
+  },
+});
 
 });
 
@@ -241,7 +376,26 @@ export const newsProxy = createProxyMiddleware("/news", {
   changeOrigin: true,
 
   pathRewrite: { "^/news": "" },
-
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("News service unavailable");
+  },
 });
 
 export const contactProxy = createProxyMiddleware("/contacts", {
@@ -251,7 +405,26 @@ export const contactProxy = createProxyMiddleware("/contacts", {
   changeOrigin: true,
 
   pathRewrite: { "^/contacts": "/contacts" },
-
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Contact service unavailable");
+  },
 });
 
 // Product Service Proxy For Staff
@@ -283,7 +456,13 @@ export const orderProxy = createProxyMiddleware("/order", {
       proxyReq.setHeader("cookie", req.headers.cookie);
 
     }
-
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
   },
 
   onProxyRes: function (proxyRes, req, res) {
@@ -333,9 +512,10 @@ export const discountProxy = createProxyMiddleware("/discount", {
     // forward x-user header set by gatewayAuth
 
     if (req.headers["x-user"]) {
-
+      console.log("🔍 Gateway: Forwarding x-user to discount service");
       proxyReq.setHeader("x-user", req.headers["x-user"]);
-
+    } else {
+      console.error("❌ Gateway: Missing x-user header for discount service");
     }
 
   },
@@ -411,19 +591,29 @@ export const repairProxy = createProxyMiddleware("/repair", {
   changeOrigin: true,
 
   pathRewrite: { "^/repair": "" },
-
-});
-
-// Review Staff Service Proxy
-
-export const reviewStaffProxy = createProxyMiddleware("/review-staff", {
-
-  target: process.env.REVIEW_STAFF_SERVICE_URL || "http://localhost:3011",
-
-  changeOrigin: true,
-
-  pathRewrite: { "^/review-staff": "/api/reviews" },
-
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      console.log("🔍 Gateway: Forwarding x-user to repair service");
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    } else {
+      console.error("❌ Gateway: Missing x-user header for repair service");
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Repair service unavailable");
+  },
 });
 
 
@@ -438,6 +628,10 @@ export const statisticsProxy = createProxyMiddleware("/statistics", {
     }
     if (req.headers.authorization) {
       proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
     }
   },
   onProxyRes: function (proxyRes, req, res) {
