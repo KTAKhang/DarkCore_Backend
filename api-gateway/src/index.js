@@ -13,7 +13,7 @@ import {
   aboutProxy,
   newsProxy,
   orderProxy,
-  productProxy,
+  productStaffProxy,
   contactProxy,
   discountProxy,
   favoriteProxy,
@@ -24,7 +24,6 @@ import {
   saleStaffOrderProxy,
   paymentProxy,
   reviewStaffProxy, // ✅ THÊM DÒNG NÀY
-
 } from "./routers/proxyRoutes.js";
 import { gatewayAuth } from "../middleware/auth.js";
 
@@ -66,7 +65,7 @@ app.use("/auth", authProxy);
 app.use("/cataloghome", cataloghomeProxy);
 
 // Product Service Proxy For Staff
-app.use("/product", productProxy);
+app.use("/product-staff",gatewayAuth, productStaffProxy);
 
 // About Service - Mixed routes (public + admin)
 // Public routes: /about/about, /about/founders, /about/founders/:id

@@ -429,14 +429,30 @@ export const contactProxy = createProxyMiddleware("/contacts", {
 
 // Product Service Proxy For Staff
 
-export const productProxy = createProxyMiddleware("/product", {
-
+export const productStaffProxy = createProxyMiddleware("/product-staff", {
   target: process.env.PRODUCT_SERVICE_URL || "http://localhost:3123",
-
   changeOrigin: true,
-
-  pathRewrite: { "^/product": "/product" },
-
+  pathRewrite: { "^/product-staff": "" },
+  // SỬA PHẦN onProxyRes → SET ORIGIN CỤ THỂ
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+   
+    // XÓA * → THAY BẰNG ORIGIN CỤ THỂ
+    delete proxyRes.headers["access-control-allow-origin"];
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Product staff service unavailable");
+  },
 });
 
 // Order Service Proxy
