@@ -7,7 +7,26 @@ const attachUserFromHeader = (req, res, next) => {
             return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
         }
 
-        const user = JSON.parse(userHeader);
+        let parsedUser = null;
+        if (typeof userHeader === "string") {
+            const trimmed = userHeader.trim();
+            if (!trimmed) {
+                return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
+            }
+            try {
+                const decoded = trimmed.startsWith("%") ? decodeURIComponent(trimmed) : trimmed;
+                parsedUser = JSON.parse(decoded);
+            } catch (decodeErr) {
+                console.error("attachUserFromHeader decode error:", decodeErr);
+                return res.status(400).json({ message: "Header user không hợp lệ", status: "ERR" });
+            }
+        } else if (typeof userHeader === "object") {
+            parsedUser = userHeader;
+        } else {
+            return res.status(400).json({ message: "Header user không hợp lệ", status: "ERR" });
+        }
+
+        const user = parsedUser;
 
         if (!mongoose.Types.ObjectId.isValid(user._id)) {
             return res.status(400).json({ message: "User ID không hợp lệ", status: "ERR" });
