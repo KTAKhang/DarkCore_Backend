@@ -1,35 +1,37 @@
+require("dotenv").config();
 const express = require("express");
-const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const bodyParser = require("body-parser");
-const routes = require("./routes");
-const swaggerDocs = require("./swagger");
-
-dotenv.config();
-
-
-
 const app = express();
-const port = process.env.PORT || 3123;
 
+const ProductRouter = require("./routes/ProductRouter.js");
 
+// Middleware
+app.use(express.json());
 app.use(cors());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
-
-routes(app);
-swaggerDocs(app);
-
+// Kết nối MongoDB
+// Thay vì mongoose.connect(process.env.MONGO_URL); trực tiếp
+if (!process.env.MONGO_URL) {
+  console.error(
+    "❌ BUG: MONGO_URL is undefined! Check .env and dotenv.config()"
+  );
+  process.exit(1); // Dừng server để tránh loop
+}
 mongoose
-    .connect(process.env.MONGO_URL)
-    .then(() => {
-        // Connected to MongoDB
-    })
-    .catch((error) => {
-        // MongoDB connection error
-    });
-
-app.listen(port, () => {
-    console.log(`🚀 Staff Product Service running on port ${port}`);
+  .connect(process.env.MONGO_URL)
+  .then(() => console.log("✅ MongoDB connected!"))
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err.message);
+    process.exit(1);
   });
+
+// Routes
+app.use("/", ProductRouter);
+// mount error handler cuối cùng
+// app.use(errorHandler);
+
+// Server listen
+const PORT = process.env.PORT || 3123;
+app.listen(PORT, () => {
+  console.log(`✅ Staff Product Service running on port ${PORT}`);
+});
