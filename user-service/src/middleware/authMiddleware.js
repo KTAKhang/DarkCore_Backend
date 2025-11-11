@@ -2,37 +2,30 @@ const mongoose = require("mongoose");
 
 const attachUserFromHeader = (req, res, next) => {
     try {
-      let user = null;
-  
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-        const token = authHeader.split(" ")[1];
-        try {
-          user = jwt.verify(token, process.env.JWT_SECRET);
-          user._id = new mongoose.Types.ObjectId(user._id || user.userId || user.id);
-        } catch {
-          user = jwt.decode(token);
-          if (user) user._id = new mongoose.Types.ObjectId(user._id || user.userId || user.id);
+        const userHeader = req.headers["x-user"];
+        if (!userHeader) {
+            return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
         }
-      }
-  
-      if (!user && req.headers["x-user"]) {
-        try {
-          user = JSON.parse(req.headers["x-user"]);
-          if (!user._id && !user.userId)
-            return res.status(400).json({ message: "Invalid user header", status: "ERR" });
-          user._id = new mongoose.Types.ObjectId(user._id || user.userId);
-        } catch {
-          return res.status(400).json({ message: "Invalid x-user format", status: "ERR" });
+
+        // Decode URL encoded JSON string
+        const userDataJson = decodeURIComponent(userHeader);
+        const user = JSON.parse(userDataJson);
+
+        if (!mongoose.Types.ObjectId.isValid(user._id)) {
+            return res.status(400).json({ message: "User ID không hợp lệ", status: "ERR" });
         }
-      }
-  
-      req.user = user; // null nếu anonymous
-      next();
+
+        if (user.status === false) {
+            return res.status(403).json({ message: "Tài khoản đã bị khóa", status: "ERR" });
+        }
+
+        req.user = user;
+        next();
     } catch (err) {
-      return res.status(400).json({ message: "Invalid authentication format", status: "ERR" });
+        console.error("attachUserFromHeader error:", err);
+        return res.status(400).json({ message: "Header user không hợp lệ", status: "ERR" });
     }
-  };
+};
 
 const authAdminMiddleware = (req, res, next) => {
     if (!req.user) {
