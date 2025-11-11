@@ -660,7 +660,15 @@ export const statisticsProxy = createProxyMiddleware("/statistics", {
   },
 });
 
+export const reviewStaffProxy = createProxyMiddleware("/review-staff", {
 
+  target: process.env.REVIEW_STAFF_SERVICE_URL || "http://localhost:3011",
+
+  changeOrigin: true,
+
+  pathRewrite: { "^/review-staff": "/api/reviews" },
+
+});
 console.log("CART_SERVICE_URL =", process.env.CART_SERVICE_URL);
 
 export default router;
