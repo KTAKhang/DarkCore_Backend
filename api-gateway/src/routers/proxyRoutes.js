@@ -275,7 +275,7 @@ export const cartProxy = createProxyMiddleware("/cart", {
   },
 });
 
-});
+
 
 // About Service Proxy (Thông tin About Us và Founders)
 
@@ -404,7 +404,7 @@ export const contactProxy = createProxyMiddleware("/contacts", {
 
   changeOrigin: true,
 
-  pathRewrite: { "^/contacts": "/contacts" },
+  pathRewrite: { "^/contacts": "" },
   onProxyReq: function (proxyReq, req, res) {
     if (req.headers.cookie) {
       proxyReq.setHeader("cookie", req.headers.cookie);
@@ -657,6 +657,33 @@ export const statisticsProxy = createProxyMiddleware("/statistics", {
   },
   onError: function (err, req, res) {
     res.status(500).send("Statistics service unavailable");
+  },
+});
+
+// Review Staff Service Proxy
+export const reviewStaffProxy = createProxyMiddleware("/review-staff", {
+  target: process.env.REVIEW_STAFF_SERVICE_URL || "http://localhost:3011",
+  changeOrigin: true,
+  pathRewrite: { "^/review-staff": "" },
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Review staff service unavailable");
   },
 });
 
