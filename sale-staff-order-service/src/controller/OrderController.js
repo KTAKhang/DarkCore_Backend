@@ -5,7 +5,6 @@ const getOrders = async (req, res) => {
     try {
         const { page, limit, search, status, sortBy } = req.query;
 
-        // ✅ Chuẩn hóa & validate
         const validPage = Math.max(1, parseInt(page) || 1);
         const validLimit = Math.min(Math.max(1, parseInt(limit) || 5), 100);
         const cleanSearch = search ? String(search).trim() : "";
@@ -13,7 +12,6 @@ const getOrders = async (req, res) => {
         const cleanSortBy =
             sortBy && typeof sortBy === "string" ? sortBy.trim().toLowerCase() : "createdat_desc";
 
-        // ✅ Gọi service
         const result = await OrderService.getOrders({
             page: validPage,
             limit: validLimit,
@@ -32,6 +30,7 @@ const getOrders = async (req, res) => {
         });
     }
 };
+
 const getOrderStats = async (req, res) => {
     try {
         const result = await OrderService.getOrderStats();
@@ -41,7 +40,6 @@ const getOrderStats = async (req, res) => {
         return res.status(500).json({ status: "ERR", message: error.message });
     }
 };
-
 
 const getOrderById = async (req, res) => {
     try {
@@ -64,7 +62,6 @@ const updateOrderStatus = async (req, res) => {
         return res.status(500).json({ status: "ERR", message: error.message });
     }
 };
-
 
 const getOrderStatuses = async (req, res) => {
     try {

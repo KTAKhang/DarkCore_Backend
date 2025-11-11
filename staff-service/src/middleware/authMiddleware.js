@@ -1,66 +1,45 @@
-const UserModel = require("../models/UserModel");
+const mongoose = require("mongoose");
 
-
-
-// Middleware lấy user từ header do Gateway gửi sang
 const attachUserFromHeader = (req, res, next) => {
     try {
-        if (req.headers["x-user"]) {
-            req.user = JSON.parse(req.headers["x-user"]);
+        const userHeader = req.headers["x-user"];
+        if (!userHeader) {
+            return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
         }
+
+        // Decode URL encoded JSON string
+        const userDataJson = decodeURIComponent(userHeader);
+        const user = JSON.parse(userDataJson);
+
+        if (!mongoose.Types.ObjectId.isValid(user._id)) {
+            return res.status(400).json({ message: "User ID không hợp lệ", status: "ERR" });
+        }
+
+        if (user.status === false) {
+            return res.status(403).json({ message: "Tài khoản đã bị khóa", status: "ERR" });
+        }
+
+        req.user = user;
         next();
     } catch (err) {
-        return res.status(400).json({ message: "Invalid user header", status: "ERR" });
+        console.error("attachUserFromHeader error:", err);
+        return res.status(400).json({ message: "Header user không hợp lệ", status: "ERR" });
     }
 };
 
-// Middleware chỉ cho Admin
-const authAdminMiddleware = async (req, res, next) => {
-    try {
-        if (!req.user) {
-            return res.status(401).json({ message: "No user data", status: "ERR" });
-        }
-
-        const userData = await UserModel.findById(req.user._id).populate("role_id", "name");
-
-        if (!userData || userData.role_id?.name !== "admin") {
-            return res.status(403).json({ message: "Access denied", status: "ERR" });
-        }
-
-        req.user = userData;
-        next();
-    } catch (err) {
-        return res.status(500).json({ message: "Internal server error", status: "ERR" });
-    }
-};
-
-// Middleware cho phép user truy cập chính họ hoặc admin
-const authMiddleware = async (req, res, next) => {
-    try {
-        if (!req.user) {
-            return res.status(401).json({ message: "No user data", status: "ERR" });
-        }
-
-        const userData = await UserModel.findById(req.user._id).populate("role_id", "name");
-
-        if (userData?.role_id?.name === "admin" || req.user._id === req.params.id) {
-            req.user = userData;
-            return next();
-        }
-
-        return res.status(403).json({ message: "Access denied", status: "ERR" });
-    } catch (err) {
-        return res.status(500).json({ message: "Internal server error", status: "ERR" });
-    }
-};
-
-// Middleware chỉ cần user login (không phân biệt role)
-const authUserMiddleware = (req, res, next) => {
-    console.log("req.user", req?.user)
+const authAdminMiddleware = (req, res, next) => {
     if (!req.user) {
-        return res.status(401).json({ message: "No user data", status: "ERR" });
+        return res.status(401).json({ message: "Không có thông tin user", status: "ERR" });
     }
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Chỉ admin mới được truy cập", status: "ERR" });
+    }
+
     next();
 };
 
-module.exports = { authMiddleware, authAdminMiddleware, authUserMiddleware, attachUserFromHeader };
+module.exports = {
+    attachUserFromHeader,
+    authAdminMiddleware,
+};

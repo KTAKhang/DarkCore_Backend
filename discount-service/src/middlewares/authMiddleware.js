@@ -1,49 +1,58 @@
-// Simplified auth middleware for discount service
-// This middleware assumes req.user is already populated by API Gateway
+const mongoose = require("mongoose");
 
-// Middleware chỉ cho Admin
-const authAdminMiddleware = async (req, res, next) => {
+const attachUserFromHeader = (req, res, next) => {
     try {
-        if (!req.user) {
-            return res.status(401).json({ message: "Không có dữ liệu người dùng", status: "ERR" });
+        const userHeader = req.headers["x-user"];
+        if (!userHeader) {
+            console.error("❌ Discount Service: Missing x-user header");
+            return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
         }
 
-        // Check if user has admin role
-        const roleName = req.user.role_id?.name || req.user.role;
-        if (roleName !== "admin") {
-            return res.status(403).json({ message: "Truy cập bị từ chối", status: "ERR" });
+        // Decode URL encoded JSON string
+        const userDataJson = decodeURIComponent(userHeader);
+        const user = JSON.parse(userDataJson);
+        console.log("🔍 Discount Service: User from header - role:", user.role, "id:", user._id);
+
+        if (!mongoose.Types.ObjectId.isValid(user._id)) {
+            console.error("❌ Discount Service: Invalid user ID:", user._id);
+            return res.status(400).json({ message: "User ID không hợp lệ", status: "ERR" });
         }
 
+        if (user.status === false) {
+            console.error("❌ Discount Service: User account is locked");
+            return res.status(403).json({ message: "Tài khoản đã bị khóa", status: "ERR" });
+        }
+
+        req.user = user;
         next();
     } catch (err) {
-        return res.status(500).json({ message: "Lỗi máy chủ nội bộ", status: "ERR" });
+        console.error("❌ Discount Service attachUserFromHeader error:", err.message);
+        console.error("❌ Header value:", req.headers["x-user"]);
+        return res.status(400).json({ message: "Header user không hợp lệ", status: "ERR" });
     }
 };
 
-// Middleware cho phép user truy cập chính họ hoặc admin
-const authMiddleware = async (req, res, next) => {
-    try {
-        if (!req.user) {
-            return res.status(401).json({ message: "Không có dữ liệu người dùng", status: "ERR" });
-        }
-
-        const roleName = req.user.role_id?.name || req.user.role;
-        if (roleName === "admin" || req.user._id === req.params.id) {
-            return next();
-        }
-
-        return res.status(403).json({ message: "Truy cập bị từ chối", status: "ERR" });
-    } catch (err) {
-        return res.status(500).json({ message: "Lỗi máy chủ nội bộ", status: "ERR" });
+const authAdminMiddleware = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ message: "Không có thông tin user", status: "ERR" });
     }
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Chỉ admin mới được truy cập", status: "ERR" });
+    }
+
+    next();
 };
 
-// Middleware chỉ cần user login (không phân biệt role)
 const authUserMiddleware = (req, res, next) => {
     if (!req.user) {
-        return res.status(401).json({ message: "Không có dữ liệu người dùng", status: "ERR" });
+        return res.status(401).json({ message: "Không có thông tin user", status: "ERR" });
     }
     next();
 };
 
-module.exports = { authMiddleware, authAdminMiddleware, authUserMiddleware };
+module.exports = {
+    attachUserFromHeader,
+    authAdminMiddleware,
+    authUserMiddleware,
+};

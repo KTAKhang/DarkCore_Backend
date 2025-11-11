@@ -95,7 +95,8 @@ const founderSchema = new mongoose.Schema(
         // Thứ tự hiển thị
         sortOrder: {
             type: Number,
-            default: 0
+            default: 1,
+            min: [1, "sortOrder phải lớn hơn hoặc bằng 1"]
         },
         
         // Trạng thái (true: hiển thị, false: ẩn)
