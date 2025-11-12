@@ -2,7 +2,7 @@ const express = require("express");
 const OrderController = require("../controller/OrderController");
 
 const router = express.Router();
-const { attachUserFromHeader, authAdminMiddleware, authCustomerMiddleware} = require("../middleware/authMiddleware");
+const { attachUserFromHeader, authAdminMiddleware, authCustomerMiddleware, authAdminOrCustomerMiddleware } = require("../middleware/authMiddleware");
 // Tạo đơn hàng mới
 router.post("/orders", attachUserFromHeader, authCustomerMiddleware, OrderController.createOrder);
 
@@ -16,7 +16,7 @@ router.get("/orders/stats", attachUserFromHeader, authAdminMiddleware, OrderCont
 router.get("/orders/history/:userId", attachUserFromHeader, authCustomerMiddleware, OrderController.getOrderHistory);
 
 // Lấy chi tiết đơn hàng theo ID - PHẢI ĐỊNH NGHĨA SAU các routes cụ thể
-router.get("/orders/:id", attachUserFromHeader, authAdminMiddleware, OrderController.getOrderById);
+router.get("/orders/:id", attachUserFromHeader, authAdminOrCustomerMiddleware, OrderController.getOrderById);
 
 // Cập nhật trạng thái đơn hàng
 router.put("/orders/:id/status", attachUserFromHeader, authAdminMiddleware, OrderController.updateOrderStatus);
