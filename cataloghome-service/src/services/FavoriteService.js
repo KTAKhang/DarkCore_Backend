@@ -47,6 +47,25 @@ const removeFavorite = async (userId, productId) => {
     }
 };
 
+// Xóa tất cả sản phẩm yêu thích của user
+const removeAllFavorites = async (userId) => {
+    try {
+        const result = await FavoriteModel.deleteMany({ user_id: userId });
+
+        if (result.deletedCount === 0) {
+            return { status: "ERR", message: "Không có sản phẩm nào trong danh sách yêu thích" };
+        }
+
+        return { 
+            status: "OK", 
+            message: `Đã xóa ${result.deletedCount} sản phẩm khỏi danh sách yêu thích`,
+            deletedCount: result.deletedCount
+        };
+    } catch (error) {
+        return { status: "ERR", message: error.message };
+    }
+};
+
 // Toggle favorite (thêm nếu chưa có, xóa nếu đã có)
 const toggleFavorite = async (userId, productId) => {
     try {
@@ -81,7 +100,7 @@ const getFavoritesByUser = async (userId, query = {}) => {
     try {
         const { page = 1, limit = 8 } = query;
 
-        // Tìm tất cả favorite của user
+        // Tìm tất cả favorite của user (KHÔNG phân trang ở đây)
         const favorites = await FavoriteModel.find({ user_id: userId })
             .populate({
                 path: "product_id",
@@ -92,9 +111,7 @@ const getFavoritesByUser = async (userId, query = {}) => {
                     select: "name status",
                 },
             })
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(Number(limit));
+            .sort({ createdAt: -1 });
 
         // Lọc bỏ các favorites có product null (do product bị ẩn)
         const validFavorites = favorites.filter(
@@ -142,17 +159,21 @@ const getFavoritesByUser = async (userId, query = {}) => {
                     ? a.name.localeCompare(b.name)
                     : b.name.localeCompare(a.name)
             );
+        } else {
+            // Mặc định sort theo thời gian thêm vào (giữ nguyên thứ tự từ validFavorites)
+            // Không cần sort vì đã sort ở query ban đầu
         }
 
-        // Đếm tổng số favorites của user (chỉ những product còn active)
-        const allFavorites = await FavoriteModel.find({ user_id: userId }).populate({
-            path: "product_id",
-            match: { status: true },
-        });
-        const total = allFavorites.filter((fav) => fav.product_id !== null).length;
+        // Đếm tổng số sau khi đã filter (tính total chính xác)
+        const total = products.length;
+
+        // Phân trang SAU KHI đã filter
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + Number(limit);
+        const paginatedProducts = products.slice(startIndex, endIndex);
 
         // Map data
-        const data = products.map((p) => {
+        const data = paginatedProducts.map((p) => {
             const obj = p.toObject();
             obj.description = obj.short_desc;
             obj.warrantyDetails = obj.detail_desc;
@@ -203,6 +224,7 @@ const checkMultipleFavorites = async (userId, productIds) => {
 module.exports = {
     addFavorite,
     removeFavorite,
+    removeAllFavorites,
     toggleFavorite,
     getFavoritesByUser,
     checkIsFavorite,

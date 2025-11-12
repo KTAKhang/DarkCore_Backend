@@ -5,43 +5,27 @@ const mongoose = require("mongoose");
 const attachUserFromHeader = (req, res, next) => {
   try {
     const userHeader = req.headers["x-user"];
-
     if (!userHeader) {
-      return res.status(401).json({ status: "ERR", code: 401, message: "Thiếu thông tin user trong header x-user" });
+      return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
     }
 
-    let user;
-    try {
-      user = typeof userHeader === "string" ? JSON.parse(userHeader) : userHeader;
-    } catch (e) {
-      console.error("attachUserFromHeader: invalid JSON in x-user header", e.message);
-      return res.status(400).json({ status: "ERR", code: 400, message: "Header x-user không hợp lệ (JSON)" });
+    // Decode URL encoded JSON string
+    const userDataJson = decodeURIComponent(userHeader);
+    const user = JSON.parse(userDataJson);
+
+    if (!mongoose.Types.ObjectId.isValid(user._id)) {
+      return res.status(400).json({ message: "User ID không hợp lệ", status: "ERR" });
     }
 
-    // Hỗ trợ cả _id hoặc userId
-    const idCandidate = user._id || user.userId;
-    if (!idCandidate) {
-      return res.status(400).json({ status: "ERR", code: 400, message: "Thiếu _id hoặc userId trong header x-user" });
-    }
-
-    // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(idCandidate)) {
-      return res.status(400).json({ status: "ERR", code: 400, message: "User ID không hợp lệ" });
-    }
-
-    // Ensure _id is a string ObjectId
-    user._id = idCandidate.toString();
-
-    // Check if account is locked/disabled
     if (user.status === false) {
-      return res.status(403).json({ status: "ERR", code: 403, message: "Tài khoản đã bị khóa" });
+      return res.status(403).json({ message: "Tài khoản đã bị khóa", status: "ERR" });
     }
 
     req.user = user;
-    return next();
+    next();
   } catch (err) {
     console.error("attachUserFromHeader error:", err);
-    return res.status(500).json({ status: "ERR", code: 500, message: "Lỗi nội bộ khi xử lý header x-user" });
+    return res.status(400).json({ message: "Header user không hợp lệ", status: "ERR" });
   }
 };
 

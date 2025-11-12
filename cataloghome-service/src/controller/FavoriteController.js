@@ -40,6 +40,23 @@ const removeFavorite = async (req, res) => {
     }
 };
 
+// Xóa tất cả sản phẩm yêu thích của user
+const removeAllFavorites = async (req, res) => {
+    try {
+        const userId = req.user?.id || req.user?._id;
+
+        if (!userId) {
+            return res.status(401).json({ status: "ERR", message: "Chưa đăng nhập" });
+        }
+
+        const result = await FavoriteService.removeAllFavorites(userId);
+        const code = result.status === "OK" ? 200 : 400;
+        return res.status(code).json(result);
+    } catch (error) {
+        return res.status(500).json({ status: "ERR", message: error.message });
+    }
+};
+
 // Toggle favorite
 const toggleFavorite = async (req, res) => {
     try {
@@ -118,6 +135,7 @@ const checkMultipleFavorites = async (req, res) => {
 module.exports = {
     addFavorite,
     removeFavorite,
+    removeAllFavorites,
     toggleFavorite,
     getFavorites,
     checkFavorite,

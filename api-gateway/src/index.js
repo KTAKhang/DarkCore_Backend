@@ -25,7 +25,7 @@ import {
   paymentProxy,
   reviewStaffProxy, // ✅ THÊM DÒNG NÀY
 } from "./routers/proxyRoutes.js";
-import { gatewayAuth } from "../middleware/auth.js";
+import { gatewayAuth, gatewayAuthConditional } from "../middleware/auth.js";
 
 dotenv.config();
 
@@ -65,13 +65,12 @@ app.use("/auth", authProxy);
 app.use("/cataloghome", cataloghomeProxy);
 
 // Product Service Proxy For Staff
-app.use("/product-staff",gatewayAuth, productStaffProxy);
+app.use("/product-staff", gatewayAuth, productStaffProxy);
 
 // About Service - Mixed routes (public + admin)
 // Public routes: /about/about, /about/founders, /about/founders/:id
 // Admin routes: /about/admin/* (About Service tự xử lý auth)
-app.use("/about", gatewayAuth, aboutProxy);
-
+app.use("/about", gatewayAuthConditional, aboutProxy);
 // ✅ Favorite routes (require JWT) - ĐẶT TRƯỚC để match specific route
 app.use("/api/favorites", gatewayAuth, favoriteProxy);
 

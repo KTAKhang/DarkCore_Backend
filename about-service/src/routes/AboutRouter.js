@@ -1,7 +1,7 @@
 const express = require("express");
 const AboutController = require("../controller/AboutController");
 const { uploadAboutLogoAndImages } = require("../middleware/uploadMiddleware");
-const { attachUserFromHeader,  authSaleStaffMiddleware, authCustomerMiddleware, authAdminMiddleware} = require("../middleware/authMiddleware");
+const { attachUserFromHeader, authSaleStaffMiddleware, authCustomerMiddleware, authAdminMiddleware } = require("../middleware/authMiddleware");
 const router = express.Router();
 
 // Lấy thông tin About Us (Public)
