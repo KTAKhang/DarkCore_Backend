@@ -22,7 +22,10 @@ router.post("/favorites/toggle/:productId", FavoriteController.toggleFavorite);
 // Thêm vào yêu thích
 router.post("/favorites", FavoriteController.addFavorite);
 
-// Xóa khỏi yêu thích
+// Xóa tất cả sản phẩm yêu thích của user (phải đặt trước route có param)
+router.delete("/favorites/all", FavoriteController.removeAllFavorites);
+
+// Xóa một sản phẩm khỏi yêu thích (route có param đặt sau)
 router.delete("/favorites/:productId", FavoriteController.removeFavorite);
 
 module.exports = router;
