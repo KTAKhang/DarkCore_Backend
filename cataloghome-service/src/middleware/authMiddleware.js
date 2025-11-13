@@ -7,7 +7,9 @@ const attachUserFromHeader = (req, res, next) => {
             return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
         }
 
-        const user = JSON.parse(userHeader);
+        // x-user được gateway set dưới dạng URL-encoded JSON → cần decode trước khi parse
+        const decodedUserHeader = decodeURIComponent(userHeader);
+        const user = JSON.parse(decodedUserHeader);
 
         if (!mongoose.Types.ObjectId.isValid(user._id)) {
             return res.status(400).json({ message: "User ID không hợp lệ", status: "ERR" });
