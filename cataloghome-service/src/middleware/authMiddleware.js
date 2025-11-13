@@ -7,6 +7,7 @@ const attachUserFromHeader = (req, res, next) => {
             return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
         }
 
+
         let parsedUser = null;
         if (typeof userHeader === "string") {
             const trimmed = userHeader.trim();
@@ -27,6 +28,7 @@ const attachUserFromHeader = (req, res, next) => {
         }
 
         const user = parsedUser;
+
 
         if (!mongoose.Types.ObjectId.isValid(user._id)) {
             return res.status(400).json({ message: "User ID không hợp lệ", status: "ERR" });
