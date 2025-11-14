@@ -1,15 +1,30 @@
 const CategoryModel = require("../models/CategoryModel");
 const ProductModel = require("../models/ProductModel");
 
+const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const buildExactMatchRegex = (value = "") => new RegExp(`^${escapeRegex(value)}$`, "i");
+const normalizeBoolean = (value) => value === true || value === "true";
+
 const createCategory = async ({ name, description = "", image = "", imagePublicId = "", status }) => {
     try {
-        const exists = await CategoryModel.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") } });
+        if (!name) {
+            return { status: "ERR", message: "Thiếu tên danh mục" };
+        }
+        const normalizedName = name.toString().trim();
+        if (!normalizedName) {
+            return { status: "ERR", message: "Tên danh mục không hợp lệ" };
+        }
+        const exists = await CategoryModel.findOne({ name: { $regex: buildExactMatchRegex(normalizedName) } });
         if (exists) return { status: "ERR", message: "Tên danh mục đã tồn tại" };
 
-        const payload = { name, description, image };
+        const payload = {
+            name: normalizedName,
+            description: description?.toString().trim() ?? "",
+            image: image?.toString().trim() ?? "",
+        };
         if (imagePublicId) payload.imagePublicId = imagePublicId;
         if (typeof status !== "undefined") {
-            payload.status = status === true || status === "true";
+            payload.status = normalizeBoolean(status);
         }
 
         const category = await CategoryModel.create(payload);
@@ -106,15 +121,20 @@ const getCategoryById = async (id) => {
 const updateCategory = async (id, payload) => {
     try {
         if (payload?.name) {
+            const normalizedName = payload.name.toString().trim();
+            if (!normalizedName) {
+                return { status: "ERR", message: "Tên danh mục không hợp lệ" };
+            }
             const exists = await CategoryModel.findOne({
                 _id: { $ne: id },
-                name: { $regex: new RegExp(`^${payload.name}$`, "i") },
+                name: { $regex: buildExactMatchRegex(normalizedName) },
             });
             if (exists) return { status: "ERR", message: "Tên danh mục đã tồn tại" };
+            payload.name = normalizedName;
         }
 
         if (typeof payload.status !== "undefined") {
-            payload.status = payload.status === true || payload.status === "true";
+            payload.status = normalizeBoolean(payload.status);
         }
 
         // Nếu có ảnh mới, xoá ảnh cũ trên Cloudinary
