@@ -263,7 +263,7 @@ const confirmRegisterOTP = async (email, otp) => {
         role_id: customerRole._id,
         phone: tempRecord.phone,
         address: tempRecord.address,
-        avatar: "https://res.cloudinary.com/dkbsae4kc/image/upload/v1753147941/avatars/jrrdk9hkpwm70bkzte6u.jpg",
+        avatar: "https://res.cloudinary.com/dkbsae4kc/image/upload/v1763021650/avatars/qpajnru8n9zc1unkx9so.png",
     });
 
     await newUser.save();
