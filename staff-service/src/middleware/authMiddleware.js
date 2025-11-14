@@ -7,7 +7,7 @@ const attachUserFromHeader = (req, res, next) => {
             return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
         }
 
-        // Decode URL encoded JSON string
+     
         const userDataJson = decodeURIComponent(userHeader);
         const user = JSON.parse(userDataJson);
 

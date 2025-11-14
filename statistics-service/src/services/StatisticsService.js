@@ -75,7 +75,6 @@ const getRevenueByMonth = async (year) => {
             { $sort: { _id: 1 } }
         ]);
 
-        // Fill missing months with 0
         const monthlyRevenue = Array.from({ length: 12 }, (_, i) => {
             const monthData = revenueData.find(item => item._id === i + 1);
             return {
@@ -281,8 +280,8 @@ const getTopCustomerTrends = async (month, year, limit = 3) => {
         
         // If month is null or 0, calculate for the whole year
         if (!month || month === 0) {
-            startDate = new Date(year, 0, 1); // January 1st
-            endDate = new Date(year, 11, 31, 23, 59, 59); // December 31st
+            startDate = new Date(year, 0, 1); // January 1
+            endDate = new Date(year, 11, 31, 23, 59, 59); // December 31
         } else {
             startDate = new Date(year, month - 1, 1);
             endDate = new Date(year, month, 0, 23, 59, 59);

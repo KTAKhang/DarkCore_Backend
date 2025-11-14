@@ -90,7 +90,7 @@ const getTopCustomerTrends = async (req, res) => {
     try {
         const { month, year, limit } = req.query;
         const result = await StatisticsService.getTopCustomerTrends(
-            parseInt(month) || new Date().getMonth() + 1,
+            month !== undefined && month !== null ? parseInt(month) : new Date().getMonth() + 1,
             parseInt(year) || new Date().getFullYear(),
             parseInt(limit) || 3
         );
