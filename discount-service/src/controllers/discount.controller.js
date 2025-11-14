@@ -1,6 +1,5 @@
 const DiscountService = require("../services/DiscountService");
-
-// BR1, BR2, BR3, BR4 enforced here
+// Admin create new discount
 exports.createDiscount = async (req, res) => {
     const result = await DiscountService.createDiscount(req.body);
     return res.status(result.httpCode).json({ 
@@ -10,7 +9,7 @@ exports.createDiscount = async (req, res) => {
     });
 };
 
-// Admin list all - với phân trang, sort và filter
+// Admin list all 
 exports.getAllDiscounts = async (req, res) => {
     const result = await DiscountService.getAllDiscountsWithPagination(req.query);
     return res.status(result.httpCode).json({ 
@@ -20,7 +19,7 @@ exports.getAllDiscounts = async (req, res) => {
     });
 };
 
-// Admin list all - method cũ để backward compatibility
+// Admin list all 
 exports.getAllDiscountsLegacy = async (_req, res) => {
     const result = await DiscountService.getAllDiscounts();
     return res.status(result.httpCode).json({ 
@@ -40,7 +39,7 @@ exports.getActiveDiscounts = async (_req, res) => {
     });
 };
 
-// Admin sees all; user only active
+// Admin sees all; user only see active
 exports.getByCode = async (req, res) => {
     const { code } = req.params;
     const userRole = req.user?.role_id?.name;
@@ -52,7 +51,7 @@ exports.getByCode = async (req, res) => {
     });
 };
 
-// BR3: only update if not started yet OR already ended
+// only update if not started yet OR already ended
 exports.updateDiscount = async (req, res) => {
     const { id } = req.params;
     const result = await DiscountService.updateDiscount(id, req.body);
@@ -63,7 +62,7 @@ exports.updateDiscount = async (req, res) => {
     });
 };
 
-// BR2: soft deactivate
+//soft deactivate
 exports.deactivateDiscount = async (req, res) => {
     const { id } = req.params;
     const result = await DiscountService.deactivateDiscount(id);
@@ -74,7 +73,7 @@ exports.deactivateDiscount = async (req, res) => {
     });
 };
 
-// Tìm kiếm mã giảm giá
+// search discounts by code or date range
 exports.searchDiscounts = async (req, res) => {
     const { keyword } = req.query;
     const result = await DiscountService.searchDiscounts(keyword, req.query);

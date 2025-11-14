@@ -4,7 +4,6 @@ const StaffService = require('../services/StaffService');
 const updateStaffStatusController = async (req, res) => {
     try {
         const { staffId } = req.params;
-        // allow boolean false, do not reject falsy
         const status = req.body?.status;
         if (!staffId || status === undefined) {
             return res.status(400).json({ status: "ERR", message: "User ID and status are required" });

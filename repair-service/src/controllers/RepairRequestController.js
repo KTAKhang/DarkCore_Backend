@@ -3,7 +3,7 @@ const RepairRequestService = require("../services/RepairRequestService");
 class RepairRequestController {
 	static async create(req, res) {
 		try {
-			const userId = req.user?._id || req.user?.id || req.body.user; // fallback for tests
+			const userId = req.user?._id || req.user?.id || req.body.user; 
 			if (!userId) return res.status(401).json({ status: "ERR", message: "Unauthenticated" });
 			const data = await RepairRequestService.createRequest(userId, req.body);
 			return res.status(201).json({ status: "OK", data });

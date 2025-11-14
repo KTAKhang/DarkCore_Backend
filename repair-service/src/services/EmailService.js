@@ -7,7 +7,7 @@ const getTransporter = () => {
 	if (!transporter) {
 		// Check environment variables
 		if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-			console.error('❌ SMTP environment variables not set!');
+			console.error('SMTP environment variables not set!');
 			console.error('Required: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS');
 			throw new Error('Missing SMTP configuration');
 		}
@@ -43,7 +43,7 @@ const sendRepairCompletionEmail = async (repairRequest, user, services) => {
 		const mailOptions = {
 			from: `"DarkCore Computer" <${process.env.SMTP_USER}>`,
 			to: user.email,
-			subject: '✅ Thiết bị của bạn đã được sửa chữa xong!',
+			subject: 'Thiết bị của bạn đã được sửa chữa xong!',
 			html: `
 				<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
 					<div style="background: linear-gradient(135deg, #13C2C2 0%, #0D364C 100%); padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
@@ -55,18 +55,18 @@ const sendRepairCompletionEmail = async (repairRequest, user, services) => {
 						<h2 style="color: #13C2C2; margin-top: 0;">Chào ${user.user_name || user.email},</h2>
 						
 						<p style="font-size: 16px; line-height: 1.6; color: #333;">
-							Chúng tôi vui mừng thông báo rằng thiết bị của bạn đã được sửa chữa <strong>hoàn tất</strong>! 🎉
+							Chúng tôi vui mừng thông báo rằng thiết bị của bạn đã được sửa chữa <strong>hoàn tất</strong>!
 						</p>
 						
 						<div style="background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #13C2C2;">
-							<h3 style="color: #0D364C; margin-top: 0;">📱 Thông tin thiết bị:</h3>
+							<h3 style="color: #0D364C; margin-top: 0;">Thông tin thiết bị:</h3>
 							<p style="margin: 5px 0;"><strong>Thiết bị:</strong> ${repairRequest.deviceBrand} ${repairRequest.deviceModel}</p>
 							<p style="margin: 5px 0;"><strong>Loại:</strong> ${repairRequest.deviceName}</p>
 							${repairRequest.serialNumber ? `<p style="margin: 5px 0;"><strong>Serial:</strong> ${repairRequest.serialNumber}</p>` : ''}
 						</div>
 						
 						<div style="background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #52C41A;">
-							<h3 style="color: #0D364C; margin-top: 0;">🔧 Dịch vụ đã thực hiện:</h3>
+							<h3 style="color: #0D364C; margin-top: 0;">Dịch vụ đã thực hiện:</h3>
 							<ul style="margin: 10px 0; padding-left: 20px;">
 								${servicesHTML}
 							</ul>
@@ -78,7 +78,7 @@ const sendRepairCompletionEmail = async (repairRequest, user, services) => {
 						
 						<div style="background-color: #fff7e6; padding: 15px; border-radius: 8px; margin: 20px 0;">
 							<p style="margin: 0; color: #d4380d; font-weight: 500;">
-								⚠️ Vui lòng mang theo email này khi đến nhận thiết bị.
+								Lưu ý: Vui lòng mang theo email này khi đến nhận thiết bị.
 							</p>
 						</div>
 						
@@ -87,7 +87,7 @@ const sendRepairCompletionEmail = async (repairRequest, user, services) => {
 						</p>
 						
 						<p style="font-size: 16px; line-height: 1.6; color: #333;">
-							Cảm ơn bạn đã tin tưởng sử dụng dịch vụ của DarkCore Computer! 🙏
+							Cảm ơn bạn đã tin tưởng sử dụng dịch vụ của DarkCore Computer!
 						</p>
 					</div>
 					
@@ -105,7 +105,7 @@ const sendRepairCompletionEmail = async (repairRequest, user, services) => {
 
 		return { success: true, messageId: info.messageId };
 	} catch (error) {
-		console.error('❌ Error sending email:', error);
+		console.error('Error sending email:', error);
 		return { success: false, error: error.message };
 	}
 };

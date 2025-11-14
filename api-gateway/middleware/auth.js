@@ -35,7 +35,7 @@ export const gatewayAuth = async (req, res, next) => {
         next();
 
     } catch (error) {
-        console.error("❌ AuthService verify failed:", error.message);
+        console.error("AuthService verify failed:", error.message);
 
         if (error.response) {
             const errData = error.response.data;
@@ -97,7 +97,7 @@ export const gatewayAuthConditional = async (req, res, next) => {
         req.headers["x-user"] = encodeURIComponent(userDataJson);
         next();
     } catch (error) {
-        console.error("❌ AuthService verify failed:", error.message);
+        console.error("AuthService verify failed:", error.message);
         if (error.response) {
             const errData = error.response.data;
             return res.status(errData.code || error.response.status || 500).json({

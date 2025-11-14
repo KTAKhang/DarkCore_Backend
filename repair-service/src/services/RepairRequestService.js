@@ -265,7 +265,7 @@ class RepairRequestService {
 		// Send email
 		await sendRepairCompletionEmail(request, request.user, services);
 		} catch (error) {
-			console.error('❌ Failed to send completion email:', error);
+			console.error('Failed to send completion email:', error);
 			// Don't throw - we don't want to fail the status update if email fails
 		}
 	}

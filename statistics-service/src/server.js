@@ -19,13 +19,13 @@ routes(app);
 mongoose
     .connect(process.env.MONGO_URL)
     .then(() => {
-        console.log("✅ Connected to MongoDB");
+        console.log("Connected to MongoDB");
     })
     .catch((error) => {
-        console.error("❌ MongoDB connection error:", error);
+        console.error("MongoDB connection error:", error);
     });
 
 app.listen(port, () => {
-    console.log(`🚀 Statistics Service running on port ${port}`);
+    console.log(`Statistics Service running on port ${port}`);
 });
 
