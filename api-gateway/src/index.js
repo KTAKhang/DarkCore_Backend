@@ -23,7 +23,8 @@ import {
   productReviewGuestProxy,
   saleStaffOrderProxy,
   paymentProxy,
-  reviewStaffProxy, // ✅ THÊM DÒNG NÀY
+  reviewStaffProxy,
+  statisticsStaffProxy,
 } from "./routers/proxyRoutes.js";
 import { gatewayAuth, gatewayAuthConditional } from "../middleware/auth.js";
 
@@ -91,7 +92,8 @@ app.use("/discount", gatewayAuth, discountProxy);
 app.use("/news", gatewayAuth, newsProxy);
 app.use("/statistics", gatewayAuth, statisticsProxy);
 app.use("/payment", paymentProxy); // Payment service tự xử lý auth
-
+// Statistics Staff Service (Sales Staff Dashboard) - require JWT
+app.use("/statistics-staff", gatewayAuth, statisticsStaffProxy);
 // Health check
 app.get("/", (req, res) => {
   res.send("🚀 API Gateway is running");
@@ -115,6 +117,8 @@ app.listen(PORT, () => {
     CART: ${process.env.CART_SERVICE_URL || "http://localhost:3005"}
     PAYMENT: ${process.env.PAYMENT_SERVICE_URL || "http://localhost:3007"}
     PRODUCT FOR STAFF : ${process.env.PRODUCT_SERVICE_URL || "http://localhost:3123"}
-    REVIEW STAFF: ${process.env.REVIEW_STAFF_SERVICE_URL || "http://localhost:3011"} // ✅ THÊM DÒNG NÀY
+    REVIEW STAFF: ${process.env.REVIEW_STAFF_SERVICE_URL || "http://localhost:3011"}
+     STATISTICS STAFF: ${process.env.STATISTICS_STAFF_SERVICE_URL || "http://localhost:3015"}
+  
   `);
 });

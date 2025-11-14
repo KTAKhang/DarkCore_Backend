@@ -2,12 +2,36 @@ const ProductModel = require("../models/ProductModel");
 const CategoryModel = require("../models/CategoryModel");
 const mongoose = require("mongoose");
 
+const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const buildExactMatchRegex = (value = "") => new RegExp(`^${escapeRegex(value)}$`, "i");
+
 const createProduct = async (payload) => {
     try {
         const { name, price, stockQuantity } = payload;
         if (!name || price == null || stockQuantity == null || !payload.category) {
             return { status: "ERR", message: "Thiếu các trường bắt buộc" };
         }
+        const normalizedName = name.toString().trim();
+        if (!normalizedName) {
+            return { status: "ERR", message: "Tên sản phẩm không hợp lệ" };
+        }
+        payload.name = normalizedName;
+        const regexName = buildExactMatchRegex(normalizedName);
+        const existingProduct = await ProductModel.findOne({ name: { $regex: regexName } });
+        if (existingProduct) {
+            return { status: "ERR", message: "Tên sản phẩm đã tồn tại" };
+        }
+        const parsedPrice = Number(price);
+        if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+            return { status: "ERR", message: "Giá sản phẩm phải là số không âm" };
+        }
+        payload.price = parsedPrice;
+
+        const parsedStockQuantity = Number(stockQuantity);
+        if (!Number.isFinite(parsedStockQuantity) || parsedStockQuantity < 0 || !Number.isInteger(parsedStockQuantity)) {
+            return { status: "ERR", message: "Tồn kho phải là số nguyên không âm" };
+        }
+        payload.stockQuantity = parsedStockQuantity;
         // Cho phép nhận category theo tên hoặc ObjectId; yêu cầu status=true
         let categoryDoc = null;
         if (mongoose.isValidObjectId(payload.category)) {
@@ -212,6 +236,45 @@ const getProductById = async (id) => {
 
 const updateProduct = async (id, payload) => {
     try {
+        const currentProduct = await ProductModel.findById(id);
+        if (!currentProduct) return { status: "ERR", message: "Không tìm thấy sản phẩm" };
+
+        if (typeof payload.name !== "undefined") {
+            const normalizedName = payload.name.toString().trim();
+            if (!normalizedName) {
+                return { status: "ERR", message: "Tên sản phẩm không hợp lệ" };
+            }
+            const regexName = buildExactMatchRegex(normalizedName);
+            const duplicateProduct = await ProductModel.findOne({
+                _id: { $ne: currentProduct._id },
+                name: { $regex: regexName },
+            });
+            if (duplicateProduct) {
+                return { status: "ERR", message: "Tên sản phẩm đã tồn tại" };
+            }
+            payload.name = normalizedName;
+        }
+
+        if (typeof payload.price !== "undefined") {
+            const parsedPrice = Number(payload.price);
+            if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+                return { status: "ERR", message: "Giá sản phẩm phải là số không âm" };
+            }
+            payload.price = parsedPrice;
+        }
+
+        if (typeof payload.stockQuantity !== "undefined") {
+            const parsedStockQuantity = Number(payload.stockQuantity);
+            if (
+                !Number.isFinite(parsedStockQuantity) ||
+                parsedStockQuantity < 0 ||
+                !Number.isInteger(parsedStockQuantity)
+            ) {
+                return { status: "ERR", message: "Tồn kho phải là số nguyên không âm" };
+            }
+            payload.stockQuantity = parsedStockQuantity;
+        }
+
         if (payload?.category) {
             // Cho phép cập nhật category theo tên hoặc id; yêu cầu status=true
             if (mongoose.isValidObjectId(payload.category)) {
@@ -284,11 +347,10 @@ const updateProduct = async (id, payload) => {
 
         // Nếu có ảnh mới upload, xóa ảnh cũ trên Cloudinary
         if (Array.isArray(payload.images) && payload.images.length > 0) {
-            const existing = await ProductModel.findById(id).select("imagePublicIds");
-            if (existing && Array.isArray(existing.imagePublicIds) && existing.imagePublicIds.length > 0) {
+            if (Array.isArray(currentProduct.imagePublicIds) && currentProduct.imagePublicIds.length > 0) {
                 try {
                     await Promise.all(
-                        existing.imagePublicIds.map((pid) =>
+                        currentProduct.imagePublicIds.map((pid) =>
                             require("../config/cloudinaryConfig").uploader.destroy(pid)
                         )
                     );

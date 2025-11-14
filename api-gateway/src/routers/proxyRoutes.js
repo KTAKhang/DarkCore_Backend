@@ -436,7 +436,7 @@ export const productStaffProxy = createProxyMiddleware("/product-staff", {
   // SỬA PHẦN onProxyRes → SET ORIGIN CỤ THỂ
   onProxyRes: function (proxyRes, req, res) {
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-   
+
     // XÓA * → THAY BẰNG ORIGIN CỤ THỂ
     delete proxyRes.headers["access-control-allow-origin"];
     proxyRes.headers["access-control-allow-origin"] = frontendUrl;
@@ -687,7 +687,32 @@ export const reviewStaffProxy = createProxyMiddleware("/review-staff", {
   },
 });
 
-
+// Statistics Staff Service Proxy (Sales Staff Dashboard)
+export const statisticsStaffProxy = createProxyMiddleware("/statistics-staff", {
+  target: process.env.STATISTICS_STAFF_SERVICE_URL || "http://localhost:3015",
+  changeOrigin: true,
+  pathRewrite: { "^/statistics-staff": "" },
+  onProxyReq: function (proxyReq, req, res) {
+    if (req.headers.cookie) {
+      proxyReq.setHeader("cookie", req.headers.cookie);
+    }
+    if (req.headers.authorization) {
+      proxyReq.setHeader("authorization", req.headers.authorization);
+    }
+    // forward x-user header set by gatewayAuth
+    if (req.headers["x-user"]) {
+      proxyReq.setHeader("x-user", req.headers["x-user"]);
+    }
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    proxyRes.headers["access-control-allow-origin"] = frontendUrl;
+    proxyRes.headers["access-control-allow-credentials"] = "true";
+  },
+  onError: function (err, req, res) {
+    res.status(500).send("Statistics staff service unavailable");
+  },
+});
 console.log("CART_SERVICE_URL =", process.env.CART_SERVICE_URL);
 
 export default router;
