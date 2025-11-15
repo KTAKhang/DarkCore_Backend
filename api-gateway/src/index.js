@@ -118,7 +118,7 @@ app.listen(PORT, () => {
     PAYMENT: ${process.env.PAYMENT_SERVICE_URL || "http://localhost:3007"}
     PRODUCT FOR STAFF : ${process.env.PRODUCT_SERVICE_URL || "http://localhost:3123"}
     REVIEW STAFF: ${process.env.REVIEW_STAFF_SERVICE_URL || "http://localhost:3011"}
-     STATISTICS STAFF: ${process.env.STATISTICS_STAFF_SERVICE_URL || "http://localhost:3015"}
+    STATISTICS STAFF: ${process.env.STATISTICS_STAFF_SERVICE_URL || "http://localhost:3015"}
   
   `);
 });

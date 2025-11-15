@@ -2,28 +2,38 @@ const mongoose = require("mongoose");
 
 const attachUserFromHeader = (req, res, next) => {
     try {
-        const userHeader = req.headers["x-user"];
-        if (!userHeader) {
-            return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
-        }
-
-        const user = JSON.parse(userHeader);
-
-        if (!mongoose.Types.ObjectId.isValid(user._id)) {
-            return res.status(400).json({ message: "User ID không hợp lệ", status: "ERR" });
-        }
-
-        if (user.status === false) {
-            return res.status(403).json({ message: "Tài khoản đã bị khóa", status: "ERR" });
-        }
-
-        req.user = user;
-        next();
+      const userHeader = req.headers["x-user"];
+      if (!userHeader) {
+        return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
+      }
+  
+      const trimmed = userHeader.trim();
+      if (!trimmed) {
+        return res.status(401).json({ message: "Thiếu thông tin user", status: "ERR" });
+      }
+  
+      let decodedHeader = trimmed;
+      if (/^%[0-9A-F]{2}/i.test(trimmed) || trimmed.includes("%")) {
+        decodedHeader = decodeURIComponent(trimmed);
+      }
+  
+      const user = JSON.parse(decodedHeader);
+  
+      if (!mongoose.Types.ObjectId.isValid(user._id)) {
+        return res.status(400).json({ message: "User ID không hợp lệ", status: "ERR" });
+      }
+  
+      if (user.status === false) {
+        return res.status(403).json({ message: "Tài khoản đã bị khóa", status: "ERR" });
+      }
+  
+      req.user = user;
+      next();
     } catch (err) {
-        console.error("attachUserFromHeader error:", err);
-        return res.status(400).json({ message: "Header user không hợp lệ", status: "ERR" });
+      console.error("attachUserFromHeader error:", err);
+      return res.status(400).json({ message: "Header user không hợp lệ", status: "ERR" });
     }
-};
+  };
 
 const authAdminMiddleware = (req, res, next) => {
     if (!req.user) {
