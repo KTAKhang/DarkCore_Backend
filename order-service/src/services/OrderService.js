@@ -197,6 +197,11 @@ const getOrders = async (query = {}) => {
                 };
             }
         }
+        
+        // Filter theo phương thức thanh toán nếu có
+        if (query.paymentMethod) {
+            filter.paymentMethod = query.paymentMethod.toLowerCase();
+        }
 
         // Xử lý sort - hỗ trợ createdAt và totalPrice
         let sortOption = { createdAt: -1 }; // Mặc định mới nhất
@@ -597,6 +602,11 @@ const getOrderHistory = async (userId, query = {}) => {
                     } 
                 };
             }
+        }
+        
+        // Filter theo phương thức thanh toán nếu có
+        if (query.paymentMethod) {
+            filter.paymentMethod = query.paymentMethod.toLowerCase();
         }
 
         // Xử lý sort - hỗ trợ createdAt và totalPrice
