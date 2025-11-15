@@ -518,6 +518,69 @@ const getOrderByIdForCustomer = async (orderId, userId) => {
     }
 };
 
+// ✅ Customer: Hủy đơn hàng (chỉ hủy được đơn hàng của chính họ)
+const cancelOrderByCustomer = async (orderId, userId, payload = {}) => {
+    try {
+        // Kiểm tra order tồn tại và thuộc về user
+        const order = await OrderModel.findOne({ _id: orderId, userId }).populate("orderStatusId");
+        if (!order) {
+            return { status: "ERR", message: "Không tìm thấy đơn hàng hoặc bạn không có quyền hủy đơn hàng này" };
+        }
+
+        const currentStatusName = order.orderStatusId.name;
+
+        // ✅ Chỉ cho phép hủy đơn khi ở trạng thái pending
+        if (currentStatusName !== "pending") {
+            return {
+                status: "ERR",
+                message: `Chỉ có thể hủy đơn hàng ở trạng thái "pending". Đơn hàng hiện tại đang ở trạng thái "${currentStatusName}"`
+            };
+        }
+
+        // ✅ Chặn hủy đơn thanh toán VNPay (đã thanh toán)
+        if (order.paymentMethod === "vnpay") {
+            return {
+                status: "ERR",
+                message: "Đơn hàng đã thanh toán qua VNPay không thể hủy. Vui lòng liên hệ hỗ trợ khách hàng"
+            };
+        }
+
+        // Lấy trạng thái cancelled
+        const cancelledStatus = await OrderStatusModel.findOne({ name: "cancelled", status: true, isActive: true });
+        if (!cancelledStatus) {
+            return { status: "ERR", message: "Không tìm thấy trạng thái cancelled" };
+        }
+
+        // Cập nhật trạng thái đơn hàng
+        const updateData = {
+            orderStatusId: cancelledStatus._id,
+            cancelledAt: new Date(),
+            cancelledReason: payload.cancelledReason || "Khách hàng yêu cầu hủy"
+        };
+
+        // Hoàn lại số lượng sản phẩm vào kho
+        const orderDetails = await OrderDetailModel.find({ orderId });
+        for (const detail of orderDetails) {
+            await ProductModel.findByIdAndUpdate(
+                detail.productId,
+                { $inc: { stockQuantity: detail.quantity } }
+            );
+        }
+
+        const updatedOrder = await OrderModel.findByIdAndUpdate(orderId, updateData, { new: true })
+            .populate("userId", "user_name email phone")
+            .populate("orderStatusId", "name description color");
+
+        return {
+            status: "OK",
+            message: "Đơn hàng đã được hủy thành công",
+            data: updatedOrder
+        };
+    } catch (error) {
+        return { status: "ERR", message: error.message };
+    }
+};
+
 // ✅ Customer: Lấy lịch sử đơn hàng của khách hàng với phân trang, filter và sort theo thời gian tạo
 const getOrderHistory = async (userId, query = {}) => {
     try {
@@ -691,4 +754,5 @@ module.exports = {
     // Customer Functions
     getOrderHistory,          // ✅ Customer: View order history with pagination, sort, filter, search
     getOrderByIdForCustomer,  // ✅ Customer: Read details orders (only their own orders)
+    cancelOrderByCustomer,    // ✅ Customer: Cancel order (only their own orders)
 };

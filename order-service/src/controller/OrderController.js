@@ -116,6 +116,24 @@ const getOrderHistory = async (req, res) => {
     }
 };
 
+// ✅ Customer: Hủy đơn hàng (chỉ hủy được đơn hàng của chính họ)
+const cancelOrderByCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user?.id || req.user?._id; // Lấy userId từ token
+        
+        if (!userId) {
+            return res.status(400).json({ status: "ERR", message: "Thiếu userId" });
+        }
+        
+        const result = await OrderService.cancelOrderByCustomer(id, userId, req.body);
+        const statusCode = result.status === "OK" ? 200 : 400;
+        return res.status(statusCode).json(result);
+    } catch (error) {
+        return res.status(500).json({ status: "ERR", message: error.message });
+    }
+};
+
 // ============================================
 // 📦 EXPORTS
 // ============================================
@@ -135,4 +153,5 @@ module.exports = {
     // Customer Controllers
     getOrderHistory,          // ✅ Customer: View order history with pagination, sort, filter, search
     getOrderByIdForCustomer,  // ✅ Customer: Read details orders (only their own orders)
+    cancelOrderByCustomer,    // ✅ Customer: Cancel order (only their own orders)
 };
