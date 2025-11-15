@@ -24,7 +24,9 @@ const create = async (req, res) => {
     };
 
     const result = await ProductService.createProduct(payload);
-    const code = result.status === "OK" ? 201 : 400;
+    const code = result.status === "OK" ? 201 : (result.code || 400);
+    console.log("📤 CREATE RESPONSE:", JSON.stringify(result, null, 2));
+    console.log("📤 STATUS CODE:", code);
     return res.status(code).json(result);
   } catch (error) {
     console.error("CREATE CONTROLLER ERROR:", error.message);
@@ -69,21 +71,34 @@ const update = async (req, res) => {
     console.log("UPDATE - req.files:", req.files?.map(f => ({ name: f.originalname, size: f.size })));
 
     const body = req.body || {};
-    const payload = {
-      name: body.name,
-      price: body.price,
-      stockQuantity: body.quantity ?? body.stockQuantity,
-      category: body.categoryName ?? body.category_id ?? body.category,
-      short_desc: body.short_desc ?? body.shortDesc ?? body.description,
-      detail_desc: body.detail_desc ?? body.detailDesc ?? body.warrantyDetails,
-      images: req.files?.map(f => f.buffer) || [],
-      imagePublicIds: body.imagePublicIds,
-      status: body.status,
-      brand: body.brand,
-    };
+    const payload = {};
+    
+    // Chỉ thêm field vào payload nếu nó được gửi lên (không phải undefined)
+    if (body.name !== undefined) payload.name = body.name;
+    if (body.price !== undefined) payload.price = body.price;
+    if (body.quantity !== undefined || body.stockQuantity !== undefined) {
+      payload.stockQuantity = body.quantity ?? body.stockQuantity;
+    }
+    if (body.categoryName !== undefined || body.category_id !== undefined || body.category !== undefined) {
+      payload.category = body.categoryName ?? body.category_id ?? body.category;
+    }
+    if (body.short_desc !== undefined || body.shortDesc !== undefined || body.description !== undefined) {
+      payload.short_desc = body.short_desc ?? body.shortDesc ?? body.description;
+    }
+    if (body.detail_desc !== undefined || body.detailDesc !== undefined || body.warrantyDetails !== undefined) {
+      payload.detail_desc = body.detail_desc ?? body.detailDesc ?? body.warrantyDetails;
+    }
+    if (req.files && req.files.length > 0) {
+      payload.images = req.files.map(f => f.buffer);
+    }
+    if (body.imagePublicIds !== undefined) payload.imagePublicIds = body.imagePublicIds;
+    if (body.status !== undefined) payload.status = body.status;
+    if (body.brand !== undefined) payload.brand = body.brand;
 
     const result = await ProductService.updateProduct(req.params.id, payload);
-    const code = result.status === "OK" ? 200 : 400;
+    const code = result.status === "OK" ? 200 : (result.code || 400);
+    console.log("📤 UPDATE RESPONSE:", JSON.stringify(result, null, 2));
+    console.log("📤 STATUS CODE:", code);
     return res.status(code).json(result);
   } catch (error) {
     console.error("UPDATE ERROR:", error);

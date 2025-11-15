@@ -5,6 +5,21 @@ const mongoose = require("mongoose");
 const cloudinary = require("../config/cloudinaryConfig").uploader;
 
 /**
+ * Escape special regex characters in a string
+ */
+const escapeRegex = (str) => {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+
+/**
+ * Error messages constants
+ */
+const ERROR_MESSAGES = {
+  DUPLICATE_NAME: "Tên sản phẩm đã tồn tại. Vui lòng chọn tên khác",
+  EMPTY_NAME: "Tên sản phẩm không được để trống"
+};
+
+/**
  * CREATE PRODUCT
  */
 const createProduct = async (payload) => {
@@ -23,6 +38,37 @@ const createProduct = async (payload) => {
     if (!name || price == null || stockQuantity == null || !payload.category) {
       console.log("createProduct ERR: Thiếu trường bắt buộc");
       return { status: "ERR", message: "Thiếu các trường bắt buộc" };
+    }
+
+    // Kiểm tra trùng tên sản phẩm (case-insensitive)
+    const trimmedName = name.trim();
+      if (!trimmedName) {
+        console.log("createProduct ERR: Tên sản phẩm không được để trống");
+        return { 
+          status: "ERR", 
+          code: 400,
+          message: ERROR_MESSAGES.EMPTY_NAME,
+          field: "name",
+          errorType: "REQUIRED_FIELD"
+        };
+      }
+    
+    // Cập nhật payload với tên đã được trim
+    payload.name = trimmedName;
+    
+    const escapedName = escapeRegex(trimmedName);
+    const existingProduct = await ProductModel.findOne({ 
+      name: { $regex: new RegExp(`^${escapedName}$`, "i") } 
+    });
+    if (existingProduct) {
+      console.log("createProduct ERR: Tên sản phẩm đã tồn tại");
+      return { 
+        status: "ERR", 
+        code: 409,
+        message: ERROR_MESSAGES.DUPLICATE_NAME,
+        field: "name",
+        errorType: "DUPLICATE_NAME"
+      };
     }
 
     let categoryDoc = null;
@@ -229,6 +275,55 @@ const updateProduct = async (id, payload) => {
   });
 
   try {
+    // Kiểm tra sản phẩm có tồn tại không
+    const currentProduct = await ProductModel.findById(id);
+    if (!currentProduct) {
+      console.log("updateProduct ERR: Không tìm thấy sản phẩm");
+      return { status: "ERR", message: "Không tìm thấy sản phẩm" };
+    }
+
+    // Kiểm tra trùng tên sản phẩm nếu có thay đổi tên (case-insensitive)
+    // Không tính chính sản phẩm đang được cập nhật
+    if (payload?.name !== undefined) {
+      const trimmedName = payload.name.trim();
+      
+      // Kiểm tra tên không được rỗng
+      if (!trimmedName) {
+        console.log("updateProduct ERR: Tên sản phẩm không được để trống");
+        return { 
+          status: "ERR", 
+          code: 400,
+          message: ERROR_MESSAGES.EMPTY_NAME,
+          field: "name",
+          errorType: "REQUIRED_FIELD"
+        };
+      }
+      
+      const currentName = currentProduct.name?.trim() || "";
+      
+      // Chỉ kiểm tra nếu tên thực sự thay đổi (so sánh case-insensitive)
+      if (trimmedName.toLowerCase() !== currentName.toLowerCase()) {
+        const escapedName = escapeRegex(trimmedName);
+        const existingProduct = await ProductModel.findOne({ 
+          name: { $regex: new RegExp(`^${escapedName}$`, "i") },
+          _id: { $ne: id } // Loại trừ sản phẩm hiện tại
+        });
+        if (existingProduct) {
+          console.log("updateProduct ERR: Tên sản phẩm đã tồn tại");
+          return { 
+            status: "ERR", 
+            code: 409,
+            message: ERROR_MESSAGES.DUPLICATE_NAME,
+            field: "name",
+            errorType: "DUPLICATE_NAME"
+          };
+        }
+      }
+      
+      // Cập nhật payload với tên đã được trim
+      payload.name = trimmedName;
+    }
+
     if (payload?.category) {
       let cat = null;
       if (mongoose.isValidObjectId(payload.category)) {
